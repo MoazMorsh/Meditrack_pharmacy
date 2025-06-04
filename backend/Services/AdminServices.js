@@ -1,5 +1,5 @@
 const AdminsRepo = require("../Repositories/AdminRepository");
-const MedicineRepo = require("../Repositories/MedicineRepository");
+const MedicineRepo = require("../Repositories/MedicineRepository.js");
 const PrescriptionRepo = require("../Repositories/PrescriptionRepository");
 const OrderRepository = require("../Repositories/OrderRepository");
 

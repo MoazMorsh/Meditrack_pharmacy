@@ -27,7 +27,7 @@ export default function AboutSection() {
             <div className="relative w-full max-w-[537px]">
               <div className="relative bg-[#3983fe] z-10">
                 <Image
-                  src="/about2.png?height=500&width=500"
+                  src="/placeholder.svg?height=500&width=500"
                   alt="About Meditrack"
                   width={537}
                   height={500}

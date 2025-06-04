@@ -1,7 +1,7 @@
 const PatientRepository = require("../Repositories/PatientRepository");
 const PrescriptionRepository = require("../Repositories/PrescriptionRepository");
 const OrderRepository = require("../Repositories/OrderRepository");
-const MedicineRepository = require("../Repositories/MedicineRepository");
+const MedicineRepository = require("../Repositories/MedicineRepository.js");
 
 // Profile Services
 

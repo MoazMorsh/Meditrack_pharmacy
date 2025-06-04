@@ -18,8 +18,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-// Change the default export to a named export
-export const Sidebar = function PharmacistSidebar() {
+export default function PharmacistSidebar() {
   const pathname = usePathname()
   const [isMobile, setIsMobile] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
@@ -140,6 +139,3 @@ export const Sidebar = function PharmacistSidebar() {
     </>
   )
 }
-
-// Also keep the default export for backward compatibility
-export default Sidebar

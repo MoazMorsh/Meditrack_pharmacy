@@ -98,10 +98,3 @@ export const products: Product[] = [
     discount: 0,
   },
 ]
-
-// Add the missing getProducts function
-export function getProducts(): Promise<Product[]> {
-  // In a real application, this would fetch from an API
-  // For now, we'll just return the static products array
-  return Promise.resolve(products)
-}

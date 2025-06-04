@@ -19,7 +19,7 @@ export default function AboutPage() {
           </p>
         </div>
         <div className="relative h-80 w-full rounded-lg overflow-hidden">
-          <Image src="/2.png?height=400&width=600" alt="Pharmacy team" fill className="object-cover" />
+          <Image src="/placeholder.svg?height=400&width=600" alt="Pharmacy team" fill className="object-cover" />
         </div>
       </div>
 

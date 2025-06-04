@@ -1,305 +1,290 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { Plus, Edit, Trash, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
+import React, { useEffect, useState } from "react";
+import { Plus, Edit, Trash, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface Product {
-  id: number
-  name: string
-  generic: string
-  category: string
-  type: string
-  price: number
-  quantity: number
-  prescription: boolean
-  image: string
+  id?: number;
+  name: string;
+  generic_name: string;
+  category: string;
+  type: string;
+  price: number;
+  quantity: number;
+  prescription_required: boolean;
+  img_URL: string | null;
+  active_ingredients?: string | null;
+  storage_conditions?: string | null;
 }
 
 export default function MyStore() {
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [currentProduct, setCurrentProduct] = useState<Product | null>(null)
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: 1,
-      name: "Paracetamol",
-      generic: "Acetaminophen",
-      category: "Painkillers",
-      type: "Tablets",
-      price: 5.99,
-      quantity: 100,
-      prescription: false,
-      image: "/placeholder.svg?height=300&width=300",
-    },
-    {
-      id: 2,
-      name: "Vitamin C",
-      generic: "Ascorbic Acid",
-      category: "Vitamins",
-      type: "Capsules",
-      price: 8.5,
-      quantity: 75,
-      prescription: false,
-      image: "/placeholder.svg?height=300&width=300",
-    },
-    {
-      id: 3,
-      name: "Amoxicillin",
-      generic: "Amoxicillin",
-      category: "Antibiotics",
-      type: "Capsules",
-      price: 12.99,
-      quantity: 50,
-      prescription: true,
-      image: "/placeholder.svg?height=300&width=300",
-    },
-    {
-      id: 4,
-      name: "Multivitamin",
-      generic: "Multivitamin Complex",
-      category: "Vitamins",
-      type: "Tablets",
-      price: 15.75,
-      quantity: 60,
-      prescription: false,
-      image: "/placeholder.svg?height=300&width=300",
-    },
-  ])
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+  const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const openAddModal = () => {
-    setCurrentProduct(null)
-    setIsModalOpen(true)
-  }
+  const API_BASE = "http://localhost:8081/admin/medicines";
 
-  const openEditModal = (product: Product) => {
-    setCurrentProduct(product)
-    setIsModalOpen(true)
-  }
-
-  const closeModal = () => {
-    setIsModalOpen(false)
-    setCurrentProduct(null)
-  }
-
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this product?")) {
-      setProducts(products.filter((product) => product.id !== id))
+  // Fetch products (map medicine_id -> id)
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch(API_BASE);
+      const data = await res.json();
+      const mapped = data.map((item: any) => ({
+        ...item,
+        id: item.medicine_id,
+      }));
+      setProducts(mapped);
+    } catch (err) {
+      setStatusMsg({ type: "error", msg: "Failed to fetch medicines." });
+      console.error("Failed to fetch medicines:", err);
     }
-  }
+  };
 
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  // Add product
+  const handleAdd = async (product: Product) => {
+    setLoading(true);
+    try {
+      const { id, ...rest } = product; // Don't send id on add
+      const res = await fetch(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rest),
+      });
+      if (!res.ok) throw new Error("Add failed");
+      setStatusMsg({ type: "success", msg: "Product added successfully!" });
+      await fetchProducts();
+      closeModal();
+    } catch (err) {
+      setStatusMsg({ type: "error", msg: "Failed to add product." });
+      console.error("Add error:", err);
+    }
+    setLoading(false);
+  };
+
+  // Update product (now with NO id in payload)
+  const handleUpdate = async (product: Product) => {
+    setLoading(true);
+    try {
+      if (!product.id) throw new Error("Product ID is missing.");
+      const { id, ...rest } = product; // remove id before sending to backend
+      const res = await fetch(`${API_BASE}/${product.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rest), // NO id in the body!
+      });
+      if (!res.ok) throw new Error("Update failed");
+      setStatusMsg({ type: "success", msg: "Product updated successfully!" });
+      await fetchProducts();
+      closeModal();
+    } catch (err) {
+      setStatusMsg({ type: "error", msg: "Failed to update product." });
+      console.error("Update error:", err);
+    }
+    setLoading(false);
+  };
+
+  // Delete product
+  const handleDelete = async (id?: number) => {
+    if (!id) {
+      setStatusMsg({ type: "error", msg: "Product ID missing for delete." });
+      return;
+    }
+    if (!confirm("Delete this product?")) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      setStatusMsg({ type: "success", msg: "Product deleted successfully!" });
+      await fetchProducts();
+    } catch (err) {
+      setStatusMsg({ type: "error", msg: "Failed to delete product." });
+      console.error("Delete error:", err);
+    }
+    setLoading(false);
+  };
+
+  // Handle form submit (add or update)
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const form = e.currentTarget
-    const formData = new FormData(form)
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
 
-    const newProduct = {
-      id: currentProduct ? currentProduct.id : Date.now(),
+    const getOrNull = (key: string) => {
+      const value = formData.get(key);
+      if (value === null || value === undefined) return null;
+      if (typeof value === "string" && value.trim() === "") return null;
+      return value;
+    };
+
+    const newProduct: Product = {
+      id: currentProduct?.id,
       name: formData.get("name") as string,
-      generic: formData.get("generic") as string,
+      generic_name: formData.get("generic_name") as string,
       category: formData.get("category") as string,
       type: formData.get("type") as string,
-      price: Number.parseFloat(formData.get("price") as string),
-      quantity: Number.parseInt(formData.get("quantity") as string),
-      prescription: formData.has("prescription"),
-      image: (formData.get("image") as string) || "/placeholder.svg?height=300&width=300",
-    }
+      price: parseFloat(formData.get("price") as string),
+      quantity: parseInt(formData.get("quantity") as string, 10),
+      prescription_required: formData.get("prescription_required") === "on",
+      img_URL: getOrNull("img_URL") as string | null,
+      active_ingredients: getOrNull("active_ingredients") as string | null,
+      storage_conditions: getOrNull("storage_conditions") as string | null,
+    };
 
-    if (currentProduct) {
-      // Update existing product
-      setProducts(products.map((p) => (p.id === currentProduct.id ? newProduct : p)))
-    } else {
-      // Add new product
-      setProducts([...products, newProduct])
-    }
+    currentProduct ? handleUpdate(newProduct) : handleAdd(newProduct);
+  };
 
-    closeModal()
-  }
+  const openAddModal = () => {
+    setCurrentProduct(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (product: Product) => {
+    setCurrentProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setCurrentProduct(null);
+  };
+
+  // Auto-hide status message
+  useEffect(() => {
+    if (statusMsg) {
+      const timer = setTimeout(() => setStatusMsg(null), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [statusMsg]);
 
   return (
-    <div>
+    <div className="p-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">My Store</h1>
-        <Button onClick={openAddModal} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          <span>Add Product</span>
+        <h1 className="text-2xl font-bold">My Store</h1>
+        <Button onClick={openAddModal} disabled={loading}>
+          <Plus className="h-4 w-4 mr-2" /> Add Product
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => (
-          <div key={product.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <div className="h-48 relative">
-              <img
-                src={product.image || "/placeholder.svg"}
-                alt={product.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.src = "/placeholder.svg?height=300&width=300"
-                }}
-              />
-            </div>
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{product.name}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <strong>Generic:</strong> {product.generic}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <strong>Category:</strong> {product.category}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <strong>Type:</strong> {product.type}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <strong>Price:</strong> ${product.price.toFixed(2)}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <strong>Quantity:</strong> {product.quantity}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <strong>Prescription:</strong> {product.prescription ? "Required" : "Not required"}
-              </p>
-              <div className="mt-4 flex justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEditModal(product)}
-                  className="flex items-center gap-1"
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDelete(product.id)}
-                  className="flex items-center gap-1"
-                >
-                  <Trash className="h-4 w-4" />
-                  Delete
-                </Button>
-              </div>
+          <div key={product.id} className="bg-white p-4 rounded shadow">
+            <img
+              src={product.img_URL || "/placeholder.svg?height=300&width=300"}
+              alt={product.name}
+              className="w-full h-40 object-cover mb-4"
+              onError={(e) =>
+                ((e.target as HTMLImageElement).src = "/placeholder.svg?height=300&width=300")
+              }
+            />
+            <h2 className="text-lg font-bold">{product.name}</h2>
+            <p>generic_name: {product.generic_name}</p>
+            <p>Category: {product.category}</p>
+            <p>Type: {product.type}</p>
+            <p>Price: ${product.price.toFixed(2)}</p>
+            <p>Quantity: {product.quantity}</p>
+            <p>Active Ingredients: {product.active_ingredients ?? "-"}</p>
+            <p>Storage Conditions: {product.storage_conditions ?? "-"}</p>
+            <p>Prescription: {product.prescription_required ? "Yes" : "No"}</p>
+            <div className="flex justify-between mt-4">
+              <Button onClick={() => openEditModal(product)} disabled={loading}>
+                <Edit className="h-4 w-4 mr-1" /> Edit
+              </Button>
+              <Button variant="destructive" onClick={() => handleDelete(product.id)} disabled={loading}>
+                <Trash className="h-4 w-4 mr-1" /> Delete
+              </Button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Product Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-                {currentProduct ? "Edit Product" : "Add New Product"}
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded w-full max-w-lg max-h-screen flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                {currentProduct ? "Edit Product" : "Add Product"}
               </h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-              >
-                <X className="h-5 w-5" />
+              <button onClick={closeModal}>
+                <X className="w-5 h-5 text-gray-600 hover:text-red-500" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-4">
-              <div className="space-y-4">
+            {/* Make the form scrollable */}
+            <form
+              onSubmit={handleSubmit}
+              className="grid gap-4 overflow-y-auto"
+              style={{ maxHeight: "70vh" }}
+            >
+              <div>
+                <Label>Name</Label>
+                <Input name="name" defaultValue={currentProduct?.name || ""} required />
+              </div>
+              <div>
+                <Label>generic_name</Label>
+                <Input name="generic_name" defaultValue={currentProduct?.generic_name || ""} required />
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Input name="category" defaultValue={currentProduct?.category || ""} required />
+              </div>
+              <div>
+                <Label>Type</Label>
+                <Input name="type" defaultValue={currentProduct?.type || ""} required />
+              </div>
+              <div>
+                <Label>Active Ingredients</Label>
+                <Input name="active_ingredients" defaultValue={currentProduct?.active_ingredients ?? ""} />
+              </div>
+              <div>
+                <Label>Storage Conditions</Label>
+                <Input name="storage_conditions" defaultValue={currentProduct?.storage_conditions ?? ""} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="name">Product Name*</Label>
-                  <Input id="name" name="name" defaultValue={currentProduct?.name || ""} required />
+                  <Label>Price</Label>
+                  <Input name="price" type="number" step="0.01" defaultValue={currentProduct?.price || 0} required />
                 </div>
-
                 <div>
-                  <Label htmlFor="generic">Generic Name</Label>
-                  <Input id="generic" name="generic" defaultValue={currentProduct?.generic || ""} />
-                </div>
-
-                <div>
-                  <Label htmlFor="category">Category*</Label>
-                  <select
-                    id="category"
-                    name="category"
-                    className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    defaultValue={currentProduct?.category || ""}
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    <option value="Painkillers">Painkillers</option>
-                    <option value="Vitamins">Vitamins</option>
-                    <option value="Antibiotics">Antibiotics</option>
-                    <option value="Supplements">Supplements</option>
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="type">Type*</Label>
-                  <select
-                    id="type"
-                    name="type"
-                    className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    defaultValue={currentProduct?.type || ""}
-                    required
-                  >
-                    <option value="">Select Type</option>
-                    <option value="Tablets">Tablets</option>
-                    <option value="Capsules">Capsules</option>
-                    <option value="Syrup">Syrup</option>
-                    <option value="Injection">Injection</option>
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="price">Price ($)*</Label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    defaultValue={currentProduct?.price || ""}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="quantity">Quantity*</Label>
-                  <Input
-                    id="quantity"
-                    name="quantity"
-                    type="number"
-                    min="0"
-                    defaultValue={currentProduct?.quantity || ""}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="image">Image URL</Label>
-                  <Input id="image" name="image" type="url" defaultValue={currentProduct?.image || ""} />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="prescription"
-                    name="prescription"
-                    defaultChecked={currentProduct?.prescription || false}
-                  />
-                  <Label htmlFor="prescription">Prescription Required</Label>
-                </div>
-
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={closeModal}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">{currentProduct ? "Update" : "Save"}</Button>
+                  <Label>Quantity</Label>
+                  <Input name="quantity" type="number" defaultValue={currentProduct?.quantity || 0} required />
                 </div>
               </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  name="prescription_required"
+                  defaultChecked={currentProduct?.prescription_required}
+                />
+                <Label>Prescription Required</Label>
+              </div>
+              <div>
+                <Label>Image URL</Label>
+                <Input name="img_URL" defaultValue={currentProduct?.img_URL ?? ""} />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Processing..." : currentProduct ? "Update" : "Add"} Product
+              </Button>
             </form>
           </div>
         </div>
       )}
+
+      {statusMsg && (
+        <div
+          className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded shadow-lg 
+            ${statusMsg.type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}
+        >
+          {statusMsg.msg}
+        </div>
+      )}
     </div>
-  )
+  );
 }

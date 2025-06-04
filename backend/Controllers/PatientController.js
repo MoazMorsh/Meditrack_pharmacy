@@ -39,9 +39,10 @@ router.delete("/remove-account/:id", async (req, res, next) => {
 });
 //----------------------------------------------------------------------------------------
 
-router.post("/upload-prescription", async (req, res, next) => {
+router.post("/upload-prescription/:id", async (req, res, next) => {
   try {
-    const { image, patientId } = req.body;
+    const patientId = parseInt(req.params.id);
+    const { image } = req.body;
     const prescription = { image, patientId };
     const uploaded = await PatientServices.uploadPrescription(prescription);
 

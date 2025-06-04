@@ -10,6 +10,8 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [profilePicUrl, setProfilePicUrl] = useState("")
+  const [userId, setUserId] = useState("")
   const pathname = usePathname()
 
   const navLinks = [
@@ -45,6 +47,20 @@ export default function Navbar() {
     const username = localStorage.getItem("userName")
     const email = localStorage.getItem("userEmail")
     const role = localStorage.getItem("userRole")
+    const storedUserId = localStorage.getItem("userId")
+    const storedProfilePic = localStorage.getItem("userProfilePic")
+
+    if (storedUserId) {
+      setUserId(storedUserId)
+      
+      // Set profile picture URL directly from localStorage
+      if (storedProfilePic && storedProfilePic !== "null" && storedProfilePic !== "") {
+        setProfilePicUrl(storedProfilePic)
+      } else {
+        // Use default image if no profile pic is set
+        setProfilePicUrl(defaultProfileImage)
+      }
+    }
 
     // Update profile popup if user is logged in
     if (username && email && role) {
@@ -62,10 +78,10 @@ export default function Navbar() {
       if (profileLink && profileLinkText) {
         if (role.toLowerCase() === "pharmacist") {
           profileLinkText.textContent = "Pharmacist Panel"
-          profileLink.setAttribute("href", "/pharmacist-panel")
+          profileLink.setAttribute("href", "/pharmacist")
         } else if (role.toLowerCase() === "admin") {
           profileLinkText.textContent = "Admin Panel"
-          profileLink.setAttribute("href", "/admin-panel")
+          profileLink.setAttribute("href", "/admin")
         } else {
           profileLinkText.textContent = "Order Status"
           profileLink.setAttribute("href", "/order-status")
@@ -77,6 +93,27 @@ export default function Navbar() {
   const capitalizeFirstLetter = (string: string) => {
     return string.charAt(0).toUpperCase() + string.slice(1)
   }
+
+  const defaultProfileImage = "https://kzvtniajqclodwlokxww.supabase.co/storage/v1/object/sign/images/blue-circle-with-white-user.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InN0b3JhZ2UtdXJsLXNpZ25pbmcta2V5Xzg2ZjA3MzBjLWZjM2ItNGYwYy1iNDc1LWRkZWU1Y2QzYjZhNCJ9.eyJ1cmwiOiJpbWFnZXMvYmx1ZS1jaXJjbGUtd2l0aC13aGl0ZS11c2VyLmpwZyIsImlhdCI6MTc0NjcwNDQ5MywiZXhwIjoxNzc4MjQwNDkzfQ.ws3JY7lQCYwT-DYR-Ni0EWxGiXmOUmG1DnLMj2eBy_M"
+
+  // Listen for profile picture updates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const updatedProfilePic = localStorage.getItem("userProfilePic")
+      if (updatedProfilePic && updatedProfilePic !== "null" && updatedProfilePic !== "") {
+        setProfilePicUrl(updatedProfilePic)
+      } else {
+        setProfilePicUrl(defaultProfileImage)
+      }
+    }
+
+    // Listen for storage changes (when profile is updated)
+    window.addEventListener('storage', handleStorageChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
 
   return (
     <header className="bg-fros-blue sticky top-0 z-50">
@@ -141,13 +178,12 @@ export default function Navbar() {
                 <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center overflow-hidden border-2 border-blue-500">
                   <img
                     id="profileIconImg"
-                    src="/api/get-profile-picture"
+                    src={profilePicUrl || defaultProfileImage}
                     alt="User"
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       e.currentTarget.onerror = null
-                      e.currentTarget.src =
-                        "https://kzvtniajqclodwlokxww.supabase.co/storage/v1/object/sign/images/blue-circle-with-white-user.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InN0b3JhZ2UtdXJsLXNpZ25pbmcta2V5Xzg2ZjA3MzBjLWZjM2ItNGYwYy1iNDc1LWRkZWU1Y2QzYjZhNCJ9.eyJ1cmwiOiJpbWFnZXMvYmx1ZS1jaXJjbGUtd2l0aC13aGl0ZS11c2VyLmpwZyIsImlhdCI6MTc0NjcwNDQ5MywiZXhwIjoxNzc4MjQwNDkzfQ.ws3JY7lQCYwT-DYR-Ni0EWxGiXmOUmG1DnLMj2eBy_M"
+                      e.currentTarget.src = defaultProfileImage
                     }}
                   />
                 </div>
@@ -175,13 +211,13 @@ export default function Navbar() {
                         </svg>
                       </a>
                       <p>
-                        <strong>Username:</strong> <span id="username">Guest</span>
+                        <strong>Username:</strong> <span id="username"></span>
                       </p>
                       <p>
-                        <strong>Email:</strong> <span id="email">guest@example.com</span>
+                        <strong>Email:</strong> <span id="email"></span>
                       </p>
                       <p>
-                        <strong>Role:</strong> <span id="role">Guest</span>
+                        <strong>Role:</strong> <span id="role"></span>
                       </p>
 
                       <a href="/edit-profile" className="text-blue-500 flex items-center mt-3">

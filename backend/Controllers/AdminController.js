@@ -78,8 +78,8 @@ router.get("/medicine/:id", async (req, res, next) => {
 router.put("/medicines/:id", async (req, res, next) => {
     try {
       const id = req.params.id;
-      const updates = req.body;
-      const updated = await AdminServices.updateMedicine(id, updates);
+      const product = req.body;
+      const updated = await AdminServices.updateMedicine(id, product);
       res.status(200).json("Medicine Updated Successfully",updated);
     } catch (err) {
       next(err);

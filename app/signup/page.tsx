@@ -10,6 +10,15 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Eye, EyeOff, Facebook, Twitter, Linkedin, User, Mail, Lock, Users } from "lucide-react"
 
+// Define the API response type
+interface RegisterResponse {
+  id: number
+  email: string
+  role: string
+  username: string
+  token?: string // Add token if your API returns it
+}
+
 export default function SignupPage() {
   const router = useRouter()
   const [username, setUsername] = useState("")
@@ -21,7 +30,8 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-
+/////////////////////////////////////////////////////////////////////
+//signup connection
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -36,38 +46,81 @@ export default function SignupPage() {
       return
     }
 
+    // Basic password validation
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long")
+      return
+    }
+
     try {
       setLoading(true)
       setError("")
 
-      // This would be a real API call in a production app
-      // const response = await fetch("/api/signup", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ username, email, password, role })
-      // })
+      // Make actual API call to your backend
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/auth/register`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          // Add any additional headers if needed
+        },
+        body: JSON.stringify({ 
+          role, 
+          email, 
+          password, 
+          username 
+        })
+      })
 
-      // if (!response.ok) {
-      //   throw new Error("Signup failed")
-      // }
+      if (!response.ok) {
+        // Handle different error status codes
+        const errorData = await response.json().catch(() => ({}))
+        
+        if (response.status === 400) {
+          throw new Error(errorData.error || "Invalid request data")
+        } else if (response.status === 409) {
+          throw new Error("Email or username already exists")
+        } else if (response.status === 422) {
+          throw new Error("Please check your input data")
+        } else {
+          throw new Error(errorData.error || "Registration failed. Please try again.")
+        }
+      }
 
-      // const data = await response.json()
+      const data: RegisterResponse = await response.json()
 
-      // Mock successful signup
-      setTimeout(() => {
-        // Store user data in localStorage
-        localStorage.setItem("userId", "user123")
-        localStorage.setItem("userEmail", email)
-        localStorage.setItem("userName", username)
-        localStorage.setItem("userRole", role)
-        localStorage.setItem("token", "mock-jwt-token")
+      // Store user data in localStorage
+      localStorage.setItem("userId", data.id.toString())
+      localStorage.setItem("userEmail", data.email)
+      localStorage.setItem("userName", data.username)
+      localStorage.setItem("userRole", data.role)
+      
+      // Store token if your API returns one
+      if (data.token) {
+        localStorage.setItem("token", data.token)
+      }
 
-        // Redirect to home page
-        router.push("/")
-      }, 1000)
+      // Show success message or redirect based on role
+      switch (data.role) {
+        case "admin":
+          router.push("/admin")
+          break
+        case "pharmacist":
+          router.push("/pharmacist")
+          break
+        case "patient":
+          router.push("/")
+          break
+        default:
+          router.push("/login") // Redirect to login page for verification
+      }
+
     } catch (error) {
-      console.error("Signup error:", error)
-      setError("Failed to create account")
+      console.error("Registration error:", error)
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError("An unexpected error occurred. Please try again.")
+      }
     } finally {
       setLoading(false)
     }
@@ -80,7 +133,11 @@ export default function SignupPage() {
         <div className="w-full max-w-md">
           <h1 className="text-3xl font-bold mb-8 text-center">Sign up</h1>
 
-          {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="relative">
@@ -91,6 +148,8 @@ export default function SignupPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="pl-10"
+                required
+                minLength={3}
               />
             </div>
 
@@ -102,6 +161,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-10"
+                required
               />
             </div>
 
@@ -113,6 +173,8 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10"
+                required
+                minLength={6}
               />
               <button
                 type="button"
@@ -131,6 +193,8 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="pl-10 pr-10"
+                required
+                minLength={6}
               />
               <button
                 type="button"
@@ -143,7 +207,7 @@ export default function SignupPage() {
 
             <div className="relative">
               <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <Select value={role} onValueChange={setRole}>
+              <Select value={role} onValueChange={setRole} required>
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select Role" />
                 </SelectTrigger>

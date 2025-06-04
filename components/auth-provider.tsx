@@ -1,129 +1,123 @@
 "use client"
 
-import type React from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
-import { createContext, useContext, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-
-type User = {
+interface User {
   id: string
-  email: string
   username: string
+  email: string
   role: string
+  profilePic?: string
 }
 
-type AuthContextType = {
+interface AuthContextType {
   user: User | null
   loading: boolean
-  login: (userData: any) => void
+  login: (email: string, password: string, role: string) => Promise<void>
   logout: () => void
-  isAuthenticated: boolean
+  updateUser: (userData: Partial<User>) => void
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  login: () => {},
-  logout: () => {},
-  isAuthenticated: false,
-})
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export const useAuth = () => useContext(AuthContext)
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
   useEffect(() => {
     // Check if user is logged in
     const userId = localStorage.getItem("userId")
-    const userEmail = localStorage.getItem("userEmail")
     const userName = localStorage.getItem("userName")
+    const userEmail = localStorage.getItem("userEmail")
     const userRole = localStorage.getItem("userRole")
+    const userProfilePic = localStorage.getItem("userProfilePic")
 
-    if (userId && userEmail && userName && userRole) {
+    if (userId && userName && userEmail && userRole) {
       setUser({
         id: userId,
-        email: userEmail,
         username: userName,
+        email: userEmail,
         role: userRole,
+        profilePic: userProfilePic || undefined,
       })
     }
 
     setLoading(false)
   }, [])
 
-  const login = (userData: any) => {
-    // Extract user data based on role
-    let userId, userEmail, userName, userRole
-
-    if (userData.patient) {
-      userId = userData.patient.id
-      userEmail = userData.patient.email
-      userName = userData.patient.username
-      userRole = userData.patient.role
-    } else if (userData.pharmacist) {
-      userId = userData.pharmacist.id
-      userEmail = userData.pharmacist.email
-      userName = userData.pharmacist.username
-      userRole = userData.pharmacist.role
-    } else if (userData.admin) {
-      userId = userData.admin.id
-      userEmail = userData.admin.email
-      userName = userData.admin.username
-      userRole = userData.admin.role
-    }
-
-    // Store in localStorage
-    localStorage.setItem("userId", userId)
-    localStorage.setItem("userEmail", userEmail)
-    localStorage.setItem("userName", userName)
-    localStorage.setItem("userRole", userRole)
-
-    // Update state
-    setUser({
-      id: userId,
-      email: userEmail,
-      username: userName,
-      role: userRole,
-    })
-  }
-
-  const logout = async () => {
+  const login = async (email: string, password: string, role: string) => {
     try {
-      // Call logout API
-      await fetch("/api/auth/logout", {
-        method: "POST",
-      })
+      setLoading(true)
 
-      // Clear localStorage
-      localStorage.removeItem("userId")
-      localStorage.removeItem("userEmail")
-      localStorage.removeItem("userName")
-      localStorage.removeItem("userRole")
+      // This would be a real API call in a production app
+      // const response = await fetch("/api/login", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ email, password, role })
+      // })
 
-      // Update state
-      setUser(null)
+      // if (!response.ok) {
+      //   throw new Error("Login failed")
+      // }
 
-      // Redirect to login page
-      router.push("/login")
+      // const data = await response.json()
+
+      // Mock successful login
+      const mockUser = {
+        id: "user123",
+        username: email.split("@")[0],
+        email,
+        role,
+      }
+
+      // Store user data in localStorage
+      localStorage.setItem("userId", mockUser.id)
+      localStorage.setItem("userName", mockUser.username)
+      localStorage.setItem("userEmail", mockUser.email)
+      localStorage.setItem("userRole", mockUser.role)
+      localStorage.setItem("token", "mock-jwt-token")
+
+      setUser(mockUser)
     } catch (error) {
-      console.error("Logout error:", error)
+      console.error("Login error:", error)
+      throw error
+    } finally {
+      setLoading(false)
     }
   }
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        isAuthenticated: !!user,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
+  const logout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem("userId")
+    localStorage.removeItem("userName")
+    localStorage.removeItem("userEmail")
+    localStorage.removeItem("userRole")
+    localStorage.removeItem("userProfilePic")
+    localStorage.removeItem("token")
+
+    setUser(null)
+  }
+
+  const updateUser = (userData: Partial<User>) => {
+    if (!user) return
+
+    const updatedUser = { ...user, ...userData }
+    setUser(updatedUser)
+
+    // Update localStorage
+    if (userData.username) localStorage.setItem("userName", userData.username)
+    if (userData.email) localStorage.setItem("userEmail", userData.email)
+    if (userData.role) localStorage.setItem("userRole", userData.role)
+    if (userData.profilePic) localStorage.setItem("userProfilePic", userData.profilePic)
+  }
+
+  return <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>{children}</AuthContext.Provider>
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
 }

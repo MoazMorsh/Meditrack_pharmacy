@@ -235,7 +235,7 @@ export default function AdminLayout({
                 )}
               </button>
 
-              {/* Profile Dropdown
+              {/* Profile Dropdown */}
               <div className="relative">
                 <button
                   onClick={toggleProfilePopup}
@@ -275,7 +275,7 @@ export default function AdminLayout({
                     </div>
                   </div>
                 )}
-              </div> */}
+              </div>
             </div>
           </div>
         </header>
