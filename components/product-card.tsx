@@ -1,3 +1,5 @@
+// components/product-card.tsx
+
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ShoppingCart } from "lucide-react"
@@ -6,31 +8,30 @@ import type { Product } from "@/lib/types"
 
 interface ProductCardProps {
   product: Product
+  onAddToCart?: () => void
+  inCart?: boolean
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, onAddToCart, inCart }: ProductCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all hover:shadow-lg">
       <Link href={`/products/${product.id}`} className="block relative h-48 overflow-hidden">
         <img
-          src={product.image || "/placeholder.svg"}
+          src={product.img_URL || "/placeholder.svg"}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
         {product.discount > 0 && <Badge className="absolute top-2 right-2 bg-red-500">{product.discount}% OFF</Badge>}
       </Link>
-
       <div className="p-4">
         <div className="mb-2">
           <Badge variant="outline" className="text-xs font-normal">
             {product.category}
           </Badge>
         </div>
-
         <Link href={`/products/${product.id}`}>
           <h3 className="font-semibold text-lg mb-1 hover:text-fros-blue transition-colors">{product.name}</h3>
         </Link>
-
         <div className="flex items-center mb-3">
           <div className="flex items-center">
             {[1, 2, 3, 4, 5].map((star) => (
@@ -46,7 +47,6 @@ export function ProductCard({ product }: ProductCardProps) {
             <span className="text-xs text-gray-500 ml-1">({product.reviewCount})</span>
           </div>
         </div>
-
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-bold text-lg">${product.price.toFixed(2)}</span>
@@ -56,8 +56,13 @@ export function ProductCard({ product }: ProductCardProps) {
               </span>
             )}
           </div>
-
-          <Button size="sm" className="rounded-full w-9 h-9 p-0">
+          <Button
+            size="sm"
+            className="rounded-full w-9 h-9 p-0"
+            onClick={onAddToCart}
+            disabled={inCart}
+            variant={inCart ? "secondary" : "default"}
+          >
             <ShoppingCart className="h-4 w-4" />
             <span className="sr-only">Add to cart</span>
           </Button>

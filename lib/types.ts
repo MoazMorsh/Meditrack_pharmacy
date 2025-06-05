@@ -1,4 +1,6 @@
 export interface Product {
+  img_URL: string
+  brand(brand: any): unknown
   id: number
   name: string
   description: string

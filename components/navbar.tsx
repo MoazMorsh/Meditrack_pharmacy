@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Menu, X, Search, ShoppingCart } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { useCart } from "@/components/cart-context"
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -13,6 +14,8 @@ export default function Navbar() {
   const [profilePicUrl, setProfilePicUrl] = useState("")
   const [userId, setUserId] = useState("")
   const pathname = usePathname()
+  const { cart } = useCart()
+  const totalDistinctItems = cart.length
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -25,25 +28,22 @@ export default function Navbar() {
     { name: "Contact", href: "/#contact" },
   ]
 
-  const isActive = (path: string) => {
-    return pathname === path
-  }
+  const isActive = (path: string) => pathname === path
 
   const logout = () => {
-    // Clear user data from localStorage
     localStorage.removeItem("userId")
     localStorage.removeItem("userName")
     localStorage.removeItem("userEmail")
     localStorage.removeItem("userRole")
     localStorage.removeItem("userProfilePic")
     localStorage.removeItem("token")
-
-    // Redirect to login page
     window.location.href = "/login"
   }
 
+  const defaultProfileImage =
+    "https://kzvtniajqclodwlokxww.supabase.co/storage/v1/object/sign/images/blue-circle-with-white-user.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InN0b3JhZ2UtdXJsLXNpZ25pbmcta2V5Xzg2ZjA3MzBjLWZjM2ItNGYwYy1iNDc1LWRkZWU1Y2QzYjZhNCJ9.eyJ1cmwiOiJpbWFnZXMvYmx1ZS1jaXJjbGUtd2l0aC13aGl0ZS11c2VyLmpwZyIsImlhdCI6MTc0NjcwNDQ5MywiZXhwIjoxNzc4MjQwNDkzfQ.ws3JY7lQCYwT-DYR-Ni0EWxGiXmOUmG1DnLMj2eBy_M"
+
   useEffect(() => {
-    // Get user data from localStorage
     const username = localStorage.getItem("userName")
     const email = localStorage.getItem("userEmail")
     const role = localStorage.getItem("userRole")
@@ -52,17 +52,13 @@ export default function Navbar() {
 
     if (storedUserId) {
       setUserId(storedUserId)
-      
-      // Set profile picture URL directly from localStorage
       if (storedProfilePic && storedProfilePic !== "null" && storedProfilePic !== "") {
         setProfilePicUrl(storedProfilePic)
       } else {
-        // Use default image if no profile pic is set
         setProfilePicUrl(defaultProfileImage)
       }
     }
 
-    // Update profile popup if user is logged in
     if (username && email && role) {
       const usernameElement = document.querySelector("#username")
       const emailElement = document.querySelector("#email")
@@ -73,8 +69,6 @@ export default function Navbar() {
       if (usernameElement) usernameElement.textContent = username
       if (emailElement) emailElement.textContent = email
       if (roleElement) roleElement.textContent = capitalizeFirstLetter(role)
-
-      // Update profile link based on role
       if (profileLink && profileLinkText) {
         if (role.toLowerCase() === "pharmacist") {
           profileLinkText.textContent = "Pharmacist Panel"
@@ -88,15 +82,11 @@ export default function Navbar() {
         }
       }
     }
+    // eslint-disable-next-line
   }, [isProfileOpen])
 
-  const capitalizeFirstLetter = (string: string) => {
-    return string.charAt(0).toUpperCase() + string.slice(1)
-  }
+  const capitalizeFirstLetter = (string: string) => string.charAt(0).toUpperCase() + string.slice(1)
 
-  const defaultProfileImage = "https://kzvtniajqclodwlokxww.supabase.co/storage/v1/object/sign/images/blue-circle-with-white-user.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InN0b3JhZ2UtdXJsLXNpZ25pbmcta2V5Xzg2ZjA3MzBjLWZjM2ItNGYwYy1iNDc1LWRkZWU1Y2QzYjZhNCJ9.eyJ1cmwiOiJpbWFnZXMvYmx1ZS1jaXJjbGUtd2l0aC13aGl0ZS11c2VyLmpwZyIsImlhdCI6MTc0NjcwNDQ5MywiZXhwIjoxNzc4MjQwNDkzfQ.ws3JY7lQCYwT-DYR-Ni0EWxGiXmOUmG1DnLMj2eBy_M"
-
-  // Listen for profile picture updates
   useEffect(() => {
     const handleStorageChange = () => {
       const updatedProfilePic = localStorage.getItem("userProfilePic")
@@ -106,20 +96,15 @@ export default function Navbar() {
         setProfilePicUrl(defaultProfileImage)
       }
     }
-
-    // Listen for storage changes (when profile is updated)
-    window.addEventListener('storage', handleStorageChange)
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-    }
+    window.addEventListener("storage", handleStorageChange)
+    return () => window.removeEventListener("storage", handleStorageChange)
+    // eslint-disable-next-line
   }, [])
 
   return (
     <header className="bg-fros-blue sticky top-0 z-50">
       <nav className="py-3">
         <div className="container mx-auto px-4 flex items-center justify-between">
-          {/* Update the logo to match the provided image */}
           <Link href="/" className="flex items-center gap-2">
             <span className="text-white text-2xl font-bold flex items-center gap-2">
               <svg
@@ -143,7 +128,6 @@ export default function Navbar() {
               Meditrack
             </span>
           </Link>
-
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
@@ -158,7 +142,6 @@ export default function Navbar() {
               </Link>
             ))}
           </div>
-
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
             <button
@@ -168,7 +151,7 @@ export default function Navbar() {
             >
               <Search className="h-5 w-5" />
             </button>
-            {/* Replace the profile button with a more detailed profile popup */}
+            {/* Profile popup */}
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -219,7 +202,6 @@ export default function Navbar() {
                       <p>
                         <strong>Role:</strong> <span id="role"></span>
                       </p>
-
                       <a href="/edit-profile" className="text-blue-500 flex items-center mt-3">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -238,7 +220,6 @@ export default function Navbar() {
                         </svg>
                         <span>Edit Profile</span>
                       </a>
-
                       <a href="#" onClick={() => logout()} className="text-red-500 flex items-center mt-2">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -266,13 +247,14 @@ export default function Navbar() {
             <Link href="/cart">
               <button className="p-2 text-white hover:bg-blue-600 rounded-full relative" aria-label="Cart">
                 <ShoppingCart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-light-blue text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  3
-                </span>
+                {totalDistinctItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-light-blue text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {totalDistinctItems}
+                  </span>
+                )}
               </button>
             </Link>
           </div>
-
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center space-x-2">
             <button
@@ -285,9 +267,11 @@ export default function Navbar() {
             <Link href="/cart">
               <button className="p-2 text-white hover:bg-blue-600 rounded-full relative" aria-label="Cart">
                 <ShoppingCart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-light-blue text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  3
-                </span>
+                {totalDistinctItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-light-blue text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {totalDistinctItems}
+                  </span>
+                )}
               </button>
             </Link>
             <button
@@ -299,7 +283,6 @@ export default function Navbar() {
             </button>
           </div>
         </div>
-
         {/* Search Bar */}
         {isSearchOpen && (
           <div className="py-4 border-t border-blue-600">
@@ -317,7 +300,6 @@ export default function Navbar() {
             </div>
           </div>
         )}
-
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-blue-600 bg-white">
