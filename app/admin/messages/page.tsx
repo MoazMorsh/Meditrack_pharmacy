@@ -25,14 +25,19 @@ export default function Messages() {
         setLoading(true)
         setError(null)
 
-        const response = await fetch("/admin/PendingPrescription")
+        // Change the endpoint if your all-prescriptions route is different
+        const response = await fetch("http://localhost:8081/admin/PendingPrescription")
         if (!response.ok) {
           const errorData = await response.json().catch(() => null)
           throw new Error(errorData?.message || "Failed to fetch prescriptions")
         }
 
         const data = await response.json()
-        setPrescriptions(data)
+        // Defensive mapping: ensure status is a string and always present
+        setPrescriptions(data.map((p: any) => ({
+          ...p,
+          status: (p.status || "Pending").toString()
+        })))
       } catch (err: any) {
         console.error("Error fetching prescriptions:", err)
         setError(err.message || "Unknown error")
@@ -62,7 +67,7 @@ export default function Messages() {
       )
 
       // Send update request to backend
-      const response = await fetch(`/admin/UpdatePrescriptionStatus/${id}`, {
+      const response = await fetch(`http://localhost:8081/admin/UpdatePrescriptionStatus/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -74,8 +79,7 @@ export default function Messages() {
     } catch (err) {
       console.error("Error updating status:", err)
       alert("Failed to update status. Please try again.")
-      // Revert UI update on failure
-      setPrescriptions((prev) => [...prev])
+      // You might want to refetch the data here in a real app
     }
   }
 
@@ -83,7 +87,7 @@ export default function Messages() {
     if (!confirm("Are you sure you want to delete this prescription?")) return
 
     try {
-      const response = await fetch(`/admin/DeletePrescription/${id}`, {
+      const response = await fetch(`http://localhost:8081/admin/DeletePrescription/${id}`, {
         method: "DELETE",
       })
 
@@ -108,8 +112,10 @@ export default function Messages() {
     })
   }
 
-  const getStatusClass = (status: string) => {
-    switch (status.toLowerCase()) {
+  // Defensive status check: always handle as string
+  const getStatusClass = (status: any) => {
+    const val = (status || "").toString().toLowerCase()
+    switch (val) {
       case "approved":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
       case "pending":
@@ -140,7 +146,7 @@ export default function Messages() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Pending Prescriptions</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">All Prescriptions</h1>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">

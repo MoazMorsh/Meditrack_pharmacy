@@ -29,75 +29,41 @@ export default function BannerTwo() {
 
   const PRESCRIPTIONS_KEY = 'meditrack_prescriptions'
 
-  // Load prescriptions from localStorage on component mount
   useEffect(() => {
     const stored = localStorage.getItem(PRESCRIPTIONS_KEY)
-    if (stored) {
-      setPrescriptions(JSON.parse(stored))
-    }
+    if (stored) setPrescriptions(JSON.parse(stored))
   }, [])
 
-  // Save prescriptions to localStorage
   const savePrescriptions = (newPrescriptions: Prescription[]) => {
     localStorage.setItem(PRESCRIPTIONS_KEY, JSON.stringify(newPrescriptions))
     setPrescriptions(newPrescriptions)
   }
 
-  // Generate unique ID
-  const generateId = (): string => {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2)
-  }
+  const generateId = (): string =>
+    Date.now().toString(36) + Math.random().toString(36).substr(2)
 
-  // Convert file to base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }
-
-  // Format date for display
-  const formatDate = (date: string): string => {
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (date: string): string =>
+    new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })
-  }
-
-  // Helper function to get error message from unknown error
-  const getErrorMessage = (error: unknown): string => {
-    if (error instanceof Error) {
-      return error.message
-    }
-    if (typeof error === 'string') {
-      return error
-    }
-    return 'Unknown error occurred'
-  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
-      
-      // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
       if (!validTypes.includes(file.type)) {
         alert('Please select a valid file type (JPG, PNG, or PDF).')
         return
       }
-
-      // Validate file size (max 10MB)
       const maxSize = 10 * 1024 * 1024
       if (file.size > maxSize) {
         alert('File size must be less than 10MB.')
         return
       }
-
       setSelectedFile(file)
     }
   }
@@ -107,10 +73,9 @@ export default function BannerTwo() {
       alert("Please select a prescription file first")
       return
     }
-
     setIsUploading(true)
 
-    // 1) Upload to Cloudinary
+    // 1. Upload to Cloudinary
     const data = new FormData()
     data.append('file', selectedFile)
     data.append('upload_preset', 'Meditrack')
@@ -127,26 +92,28 @@ export default function BannerTwo() {
     }
 
     if (!cloudRes.ok) {
-      const err = await cloudRes.json()
-      console.error('Cloudinary Error:', err)
       setIsUploading(false)
       return alert('Upload to Cloudinary failed.')
     }
 
     const { secure_url: imageUrl } = await cloudRes.json()
-    
-    // 2) Call our backend API
+
+    // 2. Send Cloudinary URL to your backend
     const patientId = localStorage.getItem('userId')
-    const token = localStorage.getItem('token') // if you're using JWT auth
-    alert(patientId)
+    const token = localStorage.getItem('token')
+
+    // ⚠️ Adjust this if your backend is on a different port (e.g., 5000)
+    let backendURL = `http://localhost:8081/patient/upload-prescription/${patientId}`
+
+
 
     let apiRes
     try {
-      apiRes = await fetch('/patient/upload-prescription', {
+      apiRes = await fetch(backendURL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, 
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ image: imageUrl })
       })
@@ -157,38 +124,30 @@ export default function BannerTwo() {
 
     if (!apiRes.ok) {
       const errorBody = await apiRes.json().catch(() => ({}))
-      console.error('API Error:', errorBody)
-      console.error('API Status:', apiRes.status)
-      console.error('API Status Text:', apiRes.statusText)
       setIsUploading(false)
       return alert(`Failed to save prescription. Status: ${apiRes.status} - ${errorBody.message || apiRes.statusText}`)
     }
 
     const result = await apiRes.json()
-    
-    // 3) Store locally as backup (with Cloudinary URL)
+
+    // 3. Store locally as backup (with Cloudinary URL)
     const newPrescription: Prescription = {
-      id: result.prescriptionId || generateId(),
+      id: result.data?.id || generateId(),
       fileName: selectedFile.name,
       fileSize: selectedFile.size,
       fileType: selectedFile.type,
-      dataUrl: imageUrl, // Use Cloudinary URL
+      dataUrl: imageUrl,
       uploadDate: new Date().toISOString(),
       patientId: patientId || 'local-user',
       status: 'pending'
     }
-
-    // Add to local prescriptions array
     const updatedPrescriptions = [newPrescription, ...prescriptions]
     savePrescriptions(updatedPrescriptions)
-    
     alert(result.message || 'Prescription uploaded!')
-    
-    // Clear input
+
     setSelectedFile(null)
     const fileInput = document.getElementById("fileInput") as HTMLInputElement
     if (fileInput) fileInput.value = ''
-    
     setIsUploading(false)
   }
 
@@ -225,12 +184,14 @@ export default function BannerTwo() {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div className="flex justify-center">
+            {/* Aspect ratio is correct if you keep width & height in <Image /> */}
             <Image
               src="/placeholder.svg?height=400&width=400"
               alt="Upload prescription"
               width={400}
               height={400}
               className="object-contain"
+              style={{ width: "100%", height: "auto" }}
             />
           </div>
           <div className="text-center md:text-left">
@@ -245,7 +206,6 @@ export default function BannerTwo() {
               >
                 Learn More
               </Button>
-
               <div className="bg-white p-6 rounded-lg shadow-lg">
                 <div className="mb-4">
                   <input
@@ -261,10 +221,9 @@ export default function BannerTwo() {
                     </p>
                   )}
                 </div>
-                
                 <div className="flex gap-2">
-                  <Button 
-                    className="bg-light-blue text-white hover:bg-light-blue/90 flex-1" 
+                  <Button
+                    className="bg-light-blue text-white hover:bg-light-blue/90 flex-1"
                     onClick={handleUpload}
                     disabled={isUploading || !selectedFile}
                   >
@@ -280,7 +239,6 @@ export default function BannerTwo() {
                       </>
                     )}
                   </Button>
-                  
                   <Button
                     variant="outline"
                     className="bg-gray-100 hover:bg-gray-200"
@@ -295,7 +253,6 @@ export default function BannerTwo() {
           </div>
         </div>
       </div>
-
       {/* How to Upload Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
@@ -314,7 +271,6 @@ export default function BannerTwo() {
           </ol>
         </DialogContent>
       </Dialog>
-
       {/* Prescriptions List Modal */}
       <Dialog open={isPrescriptionListOpen} onOpenChange={setIsPrescriptionListOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -324,7 +280,6 @@ export default function BannerTwo() {
               <X className="h-4 w-4" />
             </DialogClose>
           </DialogHeader>
-          
           <div className="mt-4">
             {prescriptions.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
@@ -352,18 +307,17 @@ export default function BannerTwo() {
                         {prescription.status.charAt(0).toUpperCase() + prescription.status.slice(1)}
                       </div>
                     </div>
-
                     {prescription.fileType.startsWith('image/') && (
                       <div className="mb-3">
                         <img
                           src={prescription.dataUrl}
                           alt="Prescription preview"
+                          style={{ width: "100%", height: "auto" }}
                           className="w-full max-w-md h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => handleViewImage(prescription.dataUrl)}
                         />
                       </div>
                     )}
-
                     <div className="flex gap-2">
                       {prescription.fileType.startsWith('image/') && (
                         <Button
@@ -392,7 +346,6 @@ export default function BannerTwo() {
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Image Viewer Modal */}
       <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
         <DialogContent className="max-w-6xl">
@@ -406,6 +359,7 @@ export default function BannerTwo() {
             <img
               src={selectedImageUrl}
               alt="Prescription full size"
+              style={{ width: "100%", height: "auto" }}
               className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
             />
           </div>

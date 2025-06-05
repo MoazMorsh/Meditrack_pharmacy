@@ -93,7 +93,7 @@ export default function MyStore() {
     setLoading(false);
   };
 
-  // Delete product
+  // Delete product with enhanced debugging/logging
   const handleDelete = async (id?: number) => {
     if (!id) {
       setStatusMsg({ type: "error", msg: "Product ID missing for delete." });
@@ -102,8 +102,25 @@ export default function MyStore() {
     if (!confirm("Delete this product?")) return;
     setLoading(true);
     try {
+      console.log("Attempting DELETE for product id:", id);
       const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed");
+      const text = await res.text();
+      console.log("Delete response status:", res.status);
+      console.log("Delete response body:", text);
+
+      if (!res.ok) {
+        let errorMsg = "Failed to delete product.";
+        // Try to get JSON error message from backend
+        try {
+          const errorJson = JSON.parse(text);
+          if (errorJson?.message) errorMsg = errorJson.message;
+        } catch (e) {
+          if (text) errorMsg = text;
+        }
+        setStatusMsg({ type: "error", msg: errorMsg });
+        throw new Error("Delete failed: " + errorMsg);
+      }
+
       setStatusMsg({ type: "success", msg: "Product deleted successfully!" });
       await fetchProducts();
     } catch (err) {

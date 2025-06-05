@@ -97,7 +97,7 @@ export default function MyStore() {
     setLoading(false);
   };
 
-  // Delete product
+  // Delete product (robust version!)
   const handleDelete = async (id?: number) => {
     if (!id) {
       setStatusMsg({ type: "error", msg: "Product ID missing for delete." });
@@ -107,11 +107,31 @@ export default function MyStore() {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed");
+
+      // Read text for diagnostics (even if not ok)
+      const text = await res.text();
+      let errorMsg = "Failed to delete product.";
+      if (!res.ok) {
+        // Try to extract JSON message first
+        try {
+          const json = JSON.parse(text);
+          if (json && json.message) errorMsg = json.message;
+        } catch {
+          // Not JSON: Check for constraint error in raw HTML/text
+          if (text.includes("violates foreign key constraint")) {
+            errorMsg = "Cannot delete this product because it is included in an order.";
+          } else if (text && text.length < 200) {
+            errorMsg = text;
+          }
+        }
+        setStatusMsg({ type: "error", msg: errorMsg });
+        throw new Error("Delete failed: " + errorMsg);
+      }
       setStatusMsg({ type: "success", msg: "Product deleted successfully!" });
       await fetchProducts();
     } catch (err) {
-      setStatusMsg({ type: "error", msg: "Failed to delete product." });
+      // Do not overwrite backend-specific errors
+      if (!statusMsg) setStatusMsg({ type: "error", msg: "Failed to delete product." });
       console.error("Delete error:", err);
     }
     setLoading(false);
@@ -174,7 +194,7 @@ export default function MyStore() {
     <div className="flex min-h-screen bg-gray-50">
       <PharmacistSidebar />
 
-      {/* Main content area: fills remaining width */}
+      {/* Main content area */}
       <div className="flex-1 p-8 md:ml-64 w-full">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-800 text-center">My Store</h1>
@@ -195,7 +215,7 @@ export default function MyStore() {
           </Button>
         </div>
 
-        {/* Product cards grid: Fills available width */}
+        {/* Product cards grid */}
         <div
           className="grid gap-6 w-full"
           style={{
