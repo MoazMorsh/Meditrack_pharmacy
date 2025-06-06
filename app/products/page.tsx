@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useMemo, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { ProductCard } from "@/components/product-card"
 import { ProductFilter } from "@/components/product-filter"
@@ -9,12 +10,17 @@ import { useCart } from "@/components/cart-context"
 const API_BASE = "http://localhost:8081/admin/medicines"
 
 export default function ProductsPage() {
+  // Use Next.js search params
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [products, setProducts] = useState<any[]>([])
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; msg: string } | null>(null)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100])
-  const [search, setSearch] = useState("")
+  // Use search param as initial value
+  const initialSearch = searchParams.get("search") || ""
+  const [search, setSearch] = useState(initialSearch)
   const [sortBy, setSortBy] = useState("featured")
   const { cart, addToCart } = useCart()
   const [allCategories, setAllCategories] = useState<string[]>([])
@@ -22,6 +28,17 @@ export default function ProductsPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const PRODUCTS_PER_PAGE = 12
+
+  // Sync search input with URL
+  useEffect(() => {
+    setSearch(searchParams.get("search") || "")
+  }, [searchParams])
+
+  // Update URL on search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value)
+    router.replace(`/products?search=${encodeURIComponent(e.target.value)}`)
+  }
 
   // Fetch products and categories from API
   useEffect(() => {
@@ -33,14 +50,13 @@ export default function ProductsPage() {
         const mapped = data.map((item: any) => ({
           ...item,
           id: item.medicine_id,
-          img_URL: item.img_URL, // assuming image is directly in the response
+          img_URL: item.img_URL,
           rating: item.rating || 0,
           reviewCount: item.review_count || 0,
-          // add other fields as needed
         }))
         setProducts(mapped)
 
-        // Find most common categories, sorted by usage
+        // Categories logic
         const freq: Record<string, number> = {}
         mapped.forEach((p: { category: string | number }) => {
           if (p.category) freq[p.category] = (freq[p.category] || 0) + 1
@@ -57,7 +73,6 @@ export default function ProductsPage() {
     fetchProducts()
   }, [])
 
-  // Reset pagination on filter/search
   useEffect(() => {
     setCurrentPage(1)
   }, [selectedCategories, selectedRating, priceRange, search, sortBy])
@@ -145,7 +160,7 @@ export default function ProductsPage() {
                   type="text"
                   placeholder="Search products..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={handleSearchChange}
                 />
               </div>
               <select

@@ -5,17 +5,17 @@ export default function PartnersSection() {
     {
       name: "Hatem Amer",
       role: "Associate Minister of Health",
-      image: "/placeholder.svg?height=400&width=300",
+      image: "https://res.cloudinary.com/dzj5xj6sq/image/upload/v1749208556/Hatem_Amerjpg_tavjyz.jpg?height=400&width=300",
     },
     {
       name: "Riad Armanious",
       role: "chief executive officer, Eva Pharma",
-      image: "/placeholder.svg?height=400&width=300",
+      image: "https://res.cloudinary.com/dzj5xj6sq/image/upload/v1749208559/Riad-Armanious_ug7kwy.jpg?height=400&width=300",
     },
     {
       name: "Ahmed Elsobky",
       role: "Chairman of Board of Directors",
-      image: "/placeholder.svg?height=400&width=300",
+      image: "https://res.cloudinary.com/dzj5xj6sq/image/upload/v1749208560/Ahmed_elsobky_seruzk.png?height=400&width=300",
     },
   ]
 

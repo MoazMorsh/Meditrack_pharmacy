@@ -186,7 +186,7 @@ export default function BannerTwo() {
           <div className="flex justify-center">
             {/* Aspect ratio is correct if you keep width & height in <Image /> */}
             <Image
-              src="/placeholder.svg?height=400&width=400"
+              src="https://res.cloudinary.com/dzj5xj6sq/image/upload/v1749208557/banner-2XX_s16i3r.png?height=400&width=400"
               alt="Upload prescription"
               width={400}
               height={400}

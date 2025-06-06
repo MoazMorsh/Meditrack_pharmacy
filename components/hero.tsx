@@ -29,7 +29,7 @@ export default function Hero() {
           </div>
           <div className="hidden md:block">
             <Image
-              src="/placeholder.svg?height=600&width=600"
+              src="https://res.cloudinary.com/dzj5xj6sq/image/upload/v1749208558/header.jpg_a9nhju.jpg?height=600&width=600"
               alt="Pharmacy services"
               width={600}
               height={600}
