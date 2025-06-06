@@ -6,20 +6,31 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
-import { Minus, Plus, Trash2, ShoppingBag, MapPin, X } from "lucide-react"
+import { Minus, Plus, Trash2, ShoppingBag, MapPin, X, CreditCard, CheckCircle } from "lucide-react"
 import { useCart } from "@/components/cart-context"
 import { useState } from "react"
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, clearCart } = useCart()
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false)
-  const [deliveryAddress, setDeliveryAddress] = useState("")
+  const [delivery_address, setdelivery_address] = useState("")
   const [addressSet, setAddressSet] = useState(false)
-
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
+  const [isPaymentSuccess, setIsPaymentSuccess] = useState(false)
   const [coupon, setCoupon] = useState("")
   const [discount, setDiscount] = useState(0)
   const [couponMsg, setCouponMsg] = useState("")
   const [locLoading, setLocLoading] = useState(false)
+  // Card & Order States
+  const [cardNumber, setCardNumber] = useState("")
+  const [expiry, setExpiry] = useState("")
+  const [cvc, setCvc] = useState("")
+  const [cardError, setCardError] = useState("")
+  const [orderLoading, setOrderLoading] = useState(false)
+  const [orderError, setOrderError] = useState("")
+
+  // TODO: Replace with real logged-in patient id
+  const patientId = 1
 
   const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0)
   const shipping = 5.99
@@ -27,8 +38,8 @@ export default function CartPage() {
   const tax = (subtotal - discountAmount) * 0.08
   const total = subtotal - discountAmount + shipping + tax
 
-  const handleSetDeliveryAddress = () => {
-    if (deliveryAddress.trim()) {
+  const handleSetdelivery_address = () => {
+    if (delivery_address.trim()) {
       setAddressSet(true)
       setIsDeliveryModalOpen(false)
     } else {
@@ -54,11 +65,11 @@ export default function CartPage() {
           const displayAddress =
             data.display_name ||
             `Lat: ${latitude.toFixed(5)}, Lng: ${longitude.toFixed(5)}`
-          setDeliveryAddress(displayAddress)
+          setdelivery_address(displayAddress)
           setAddressSet(true)
           setIsDeliveryModalOpen(false)
         } catch (err) {
-          setDeliveryAddress(`Lat: ${latitude.toFixed(5)}, Lng: ${longitude.toFixed(5)}`)
+          setdelivery_address(`Lat: ${latitude.toFixed(5)}, Lng: ${longitude.toFixed(5)}`)
           setAddressSet(true)
           setIsDeliveryModalOpen(false)
         }
@@ -82,6 +93,57 @@ export default function CartPage() {
     } else {
       setDiscount(0)
       setCouponMsg("Invalid coupon code.")
+    }
+  }
+
+  // Payment and order submission logic
+  const handlePay = async () => {
+    // Card validation
+    if (
+      cardNumber.replace(/\s/g, '').length !== 16 ||
+      !expiry.match(/^(0[1-9]|1[0-2])\/?([0-9]{2})$/) ||
+      cvc.length !== 3
+    ) {
+      setCardError("Please enter valid card details.")
+      return
+    }
+    setCardError("")
+    setOrderLoading(true)
+    setOrderError("")
+
+    // Send ALL fields, including those for your DB
+    const items = cart.map(item => ({
+      medicine_id: item.id,
+      quantity: item.quantity,
+      price: item.price
+    }))
+
+    try {
+      const response = await fetch("http://localhost:8081/patient/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient_id: patientId,
+          items,
+          delivery_address: delivery_address,
+          shipping,
+          tax,
+          discount: discount,
+          total_price: total
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Order submission failed")
+      }
+
+      setIsPaymentSuccess(true)
+      clearCart()
+    } catch (err) {
+      setOrderError("Order failed, please try again.")
+      console.error(err)
+    } finally {
+      setOrderLoading(false)
     }
   }
 
@@ -220,7 +282,7 @@ export default function CartPage() {
                   )}
                 </div>
                 {addressSet ? (
-                  <p className="text-gray-700 mb-6">{deliveryAddress}</p>
+                  <p className="text-gray-700 mb-6">{delivery_address}</p>
                 ) : (
                   <Button className="w-full mb-6" variant="outline" onClick={() => setIsDeliveryModalOpen(true)}>
                     <MapPin className="mr-2 h-4 w-4" />
@@ -228,7 +290,7 @@ export default function CartPage() {
                   </Button>
                 )}
               </div>
-              <Button className="w-full" disabled={!addressSet}>
+              <Button className="w-full" disabled={!addressSet} onClick={() => setIsCheckoutModalOpen(true)}>
                 Proceed to Checkout
               </Button>
               <div className="mt-6">
@@ -244,6 +306,7 @@ export default function CartPage() {
           </div>
         </div>
       )}
+
       {/* Delivery Address Modal */}
       <Dialog open={isDeliveryModalOpen} onOpenChange={setIsDeliveryModalOpen}>
         <DialogContent className="sm:max-w-md">
@@ -262,8 +325,8 @@ export default function CartPage() {
               <p className="text-sm text-muted-foreground">Delivery Address:</p>
               <Textarea
                 placeholder="Enter your address"
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
+                value={delivery_address}
+                onChange={(e) => setdelivery_address(e.target.value)}
                 rows={4}
               />
             </div>
@@ -275,9 +338,110 @@ export default function CartPage() {
               <Button variant="outline" onClick={() => setIsDeliveryModalOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSetDeliveryAddress}>Confirm Address</Button>
+              <Button onClick={handleSetdelivery_address}>Confirm Address</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Gateway Modal with Card Form */}
+      <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
+        <DialogContent className="sm:max-w-md flex flex-col items-center">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <CreditCard className="mr-2 h-5 w-5" />
+              Checkout
+            </DialogTitle>
+            <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </DialogHeader>
+          {!isPaymentSuccess ? (
+            <div className="w-full flex flex-col items-center space-y-4">
+              <div className="text-xl font-semibold mb-2">Pay {`$${total.toFixed(2)}`}</div>
+              <form
+                className="w-full space-y-4"
+                onSubmit={e => {
+                  e.preventDefault()
+                  handlePay()
+                }}
+              >
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">Card Number</label>
+                  <Input
+                    type="text"
+                    placeholder="1234 5678 9012 3456"
+                    maxLength={19}
+                    value={cardNumber}
+                    onChange={e => {
+                      // Auto-format: add space every 4 digits
+                      let val = e.target.value.replace(/\D/g, '').slice(0, 16)
+                      val = val.replace(/(.{4})/g, '$1 ').trim()
+                      setCardNumber(val)
+                      setCardError("")
+                    }}
+                    required
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1 flex flex-col gap-2">
+                    <label className="text-sm font-medium">Expiry</label>
+                    <Input
+                      type="text"
+                      placeholder="MM/YY"
+                      maxLength={5}
+                      value={expiry}
+                      onChange={e => {
+                        let val = e.target.value.replace(/\D/g, '').slice(0, 4)
+                        if (val.length > 2) val = val.slice(0,2) + '/' + val.slice(2)
+                        setExpiry(val)
+                        setCardError("")
+                      }}
+                      required
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col gap-2">
+                    <label className="text-sm font-medium">CVC</label>
+                    <Input
+                      type="text"
+                      placeholder="CVC"
+                      maxLength={3}
+                      value={cvc}
+                      onChange={e => {
+                        setCvc(e.target.value.replace(/\D/g, '').slice(0,3))
+                        setCardError("")
+                      }}
+                      required
+                      inputMode="numeric"
+                    />
+                  </div>
+                </div>
+                {cardError && <div className="text-red-600 text-sm">{cardError}</div>}
+                <Button className="w-full mt-2" type="submit" disabled={orderLoading}>
+                  {orderLoading ? "Processing..." : "Pay Now"}
+                </Button>
+                {orderError && <div className="text-red-600 text-sm mt-2">{orderError}</div>}
+              </form>
+              <div className="flex gap-2 mt-2">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png" alt="Visa" className="h-7" />
+                <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Mastercard-logo.png" alt="Mastercard" className="h-7" />
+                <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-7" />
+                <img src="https://upload.wikimedia.org/wikipedia/commons/1/16/Mada_Logo.svg" alt="Mada" className="h-7" />
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center py-8">
+              <CheckCircle className="h-12 w-12 text-green-600 mb-2" />
+              <div className="text-lg font-semibold mb-2">Payment Successful!</div>
+              <div className="text-gray-600 mb-6">Thank you for your order.</div>
+              <Button asChild>
+                <Link href="/products">Back to Shop</Link>
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

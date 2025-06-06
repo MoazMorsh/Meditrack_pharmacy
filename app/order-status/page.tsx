@@ -31,7 +31,7 @@ interface Prescription {
   patientId: string
   status: string
   imageUrl: string
-  uploadedAt: string
+  created_at: string
 }
 
 export default function OrderStatusPage() {
@@ -149,7 +149,7 @@ export default function OrderStatusPage() {
           patientId: prescription.patientId?.toString(),
           status: prescription.status || "Pending",
           imageUrl: prescription.image || prescription.imageUrl || "/placeholder.svg?height=400&width=300",
-          uploadedAt: prescription.uploadDate || prescription.uploadedAt || "",
+          created_at: prescription.created_at || prescription.created_at || "",
         }))
       )
     } catch (error) {
@@ -282,7 +282,7 @@ export default function OrderStatusPage() {
                               {prescription.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3">{formatDate(prescription.uploadedAt)}</td>
+                          <td className="px-4 py-3">{formatDate(prescription.created_at)}</td>
                           <td className="px-4 py-3">
                             <Button
                               variant="outline"
