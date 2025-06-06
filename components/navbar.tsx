@@ -20,6 +20,10 @@ export default function Navbar() {
   const { cart } = useCart()
   const totalDistinctItems = cart.length
 
+  // Refs for click outside
+  const searchBarRef = useRef<HTMLDivElement | null>(null)
+  const profileRef = useRef<HTMLDivElement | null>(null)
+
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "About", href: "/#about" },
@@ -39,22 +43,7 @@ export default function Navbar() {
     "contact"
   ]
 
-  // Detect click outside for closing search bar
-  const searchBarRef = useRef<HTMLDivElement | null>(null)
-
-useEffect(() => {
-  function handleClickOutside(e: { target: any }) {
-    if (searchBarRef.current && !searchBarRef.current.contains(e.target)) {
-      setIsSearchOpen(false)
-    }
-  }
-  if (isSearchOpen) {
-    document.addEventListener("mousedown", handleClickOutside)
-  }
-  return () => document.removeEventListener("mousedown", handleClickOutside)
-}, [isSearchOpen])
-
-
+  // Handle section highlight on scroll
   useEffect(() => {
     if (pathname === "/" || pathname.startsWith("/#")) {
       const handleScroll = () => {
@@ -76,7 +65,7 @@ useEffect(() => {
     }
   }, [pathname])
 
-  const isActive = (link: { name?: string; href: any }) => {
+  const isActive = (link: { name?: string; href: string }) => {
     if (link.href.startsWith("/#")) {
       const id = link.href.split("#")[1]
       if (pathname === "/" && activeSection === id) return true
@@ -90,6 +79,7 @@ useEffect(() => {
   const defaultProfileImage =
     "https://kzvtniajqclodwlokxww.supabase.co/storage/v1/object/sign/images/blue-circle-with-white-user.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InN0b3JhZ2UtdXJsLXNpZ25pbmcta2V5Xzg2ZjA3MzBjLWZjM2ItNGYwYy1iNDc1LWRkZWU1Y2QzYjZhNCJ9.eyJ1cmwiOiJpbWFnZXMvYmx1ZS1jaXJjbGUtd2l0aC13aGl0ZS11c2VyLmpwZyIsImlhdCI6MTc0NjcwNDQ5MywiZXhwIjoxNzc4MjQwNDkzfQ.ws3JY7lQCYwT-DYR-Ni0EWxGiXmOUmG1DnLMj2eBy_M"
 
+  // Populate profile from localStorage
   useEffect(() => {
     const username = localStorage.getItem("userName")
     const email = localStorage.getItem("userEmail")
@@ -104,11 +94,27 @@ useEffect(() => {
         setProfilePicUrl(defaultProfileImage)
       }
     }
-    // ...profile logic as before
+    // Profile values (for rendering in popup)
+    setProfileState({
+      username: username || "",
+      email: email || "",
+      role: role || "",
+      profileLinkText:
+        role?.toLowerCase() === "pharmacist"
+          ? "Pharmacist Panel"
+          : role?.toLowerCase() === "admin"
+          ? "Admin Panel"
+          : "Order Status",
+      profileLink:
+        role?.toLowerCase() === "pharmacist"
+          ? "/pharmacist"
+          : role?.toLowerCase() === "admin"
+          ? "/admin"
+          : "/order-status",
+    })
   }, [isProfileOpen])
 
-  const capitalizeFirstLetter = (string: string) => string.charAt(0).toUpperCase() + string.slice(1)
-
+  // Listen for profile pic updates
   useEffect(() => {
     const handleStorageChange = () => {
       const updatedProfilePic = localStorage.getItem("userProfilePic")
@@ -122,6 +128,41 @@ useEffect(() => {
     return () => window.removeEventListener("storage", handleStorageChange)
   }, [])
 
+  // Handle click outside for search bar and profile popup
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        isSearchOpen &&
+        searchBarRef.current &&
+        !searchBarRef.current.contains(e.target as Node)
+      ) {
+        setIsSearchOpen(false)
+      }
+      if (
+        isProfileOpen &&
+        profileRef.current &&
+        !profileRef.current.contains(e.target as Node)
+      ) {
+        setIsProfileOpen(false)
+      }
+    }
+    if (isSearchOpen || isProfileOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isSearchOpen, isProfileOpen])
+
+  // Profile info state for popup rendering
+  const [profileState, setProfileState] = useState({
+    username: "",
+    email: "",
+    role: "",
+    profileLinkText: "Order Status",
+    profileLink: "/order-status",
+  })
+
   const logout = () => {
     localStorage.removeItem("userId")
     localStorage.removeItem("userName")
@@ -133,7 +174,7 @@ useEffect(() => {
   }
 
   // --- SEARCH HANDLER ---
-  const handleSearch = (e: { preventDefault: () => void }) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (!searchText.trim()) return
     router.push(`/products?search=${encodeURIComponent(searchText.trim())}`)
@@ -148,7 +189,6 @@ useEffect(() => {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <span className="text-white text-2xl font-bold flex items-center gap-2">
-              {/* Your SVG Logo */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="32"
@@ -187,7 +227,7 @@ useEffect(() => {
           </div>
           
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4 relative">
             {/* Only Search Icon */}
             <button
               className="p-2 text-white hover:bg-blue-600 rounded-full"
@@ -200,7 +240,7 @@ useEffect(() => {
             {isSearchOpen && (
               <div
                 ref={searchBarRef}
-                className="absolute top-16 right-32 z-50 bg-white rounded-lg shadow-lg p-3 w-72"
+                className="absolute top-12 right-40 z-50 bg-white rounded-lg shadow-lg p-3 w-72"
               >
                 <form className="relative" onSubmit={handleSearch}>
                   <Input
@@ -222,7 +262,7 @@ useEffect(() => {
               </div>
             )}
             
-            {/* Profile popup as before */}
+            {/* Profile popup */}
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -236,18 +276,87 @@ useEffect(() => {
                     alt="User"
                     className="w-full h-full object-cover"
                     onError={e => {
-                      e.currentTarget.onerror = null
+                      (e.currentTarget as HTMLImageElement).onerror = null
                       e.currentTarget.src = defaultProfileImage
                     }}
                   />
                 </div>
               </button>
               {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg p-4 z-50">
-                  {/* ...profile popup contents... */}
+                <div
+                  ref={profileRef}
+                  className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg p-4 z-50"
+                >
+                  <div className="space-y-2">
+                    <a id="profileLink" href={profileState.profileLink} className="text-blue-500 flex items-center mb-3">
+                      <span id="profileLinkText">{profileState.profileLinkText}</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="ml-1"
+                      >
+                        <path d="M7 7h10v10" />
+                        <path d="M7 17 17 7" />
+                      </svg>
+                    </a>
+                    <p>
+                      <strong>Username:</strong> <span id="username">{profileState.username}</span>
+                    </p>
+                    <p>
+                      <strong>Email:</strong> <span id="email">{profileState.email}</span>
+                    </p>
+                    <p>
+                      <strong>Role:</strong> <span id="role">{profileState.role}</span>
+                    </p>
+                    <a href="/edit-profile" className="text-blue-500 flex items-center mt-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="mr-1"
+                      >
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                      </svg>
+                      <span>Edit Profile</span>
+                    </a>
+                    <a href="#" onClick={logout} className="text-red-500 flex items-center mt-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="mr-1"
+                      >
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" x2="9" y1="12" y2="12" />
+                      </svg>
+                      <span>Logout</span>
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
+            {/* Cart */}
             <Link href="/cart">
               <button className="p-2 text-white hover:bg-blue-600 rounded-full relative" aria-label="Cart">
                 <ShoppingCart className="h-5 w-5" />
@@ -342,7 +451,3 @@ useEffect(() => {
     </header>
   )
 }
-function contains(target: any) {
-  throw new Error("Function not implemented.")
-}
-

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Eye, EyeOff, Facebook, Twitter, Linkedin, User, Lock, Users } from "lucide-react"
+import { motion } from "framer-motion"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -96,14 +97,40 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8">
-        <div className="w-full max-w-md">
+    <div className="min-h-screen flex bg-gradient-to-br from-blue-500 to-blue-700">
+      {/* Left (Info) Panel with Animation */}
+      <motion.div
+        initial={{ x: -80, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.7, type: "spring" }}
+        className="hidden lg:flex w-1/2 flex-col justify-center items-center relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #1976D2 0%, #2196F3 100%)" }}
+      >
+        <div className="z-10 flex flex-col items-center justify-center">
+          <h2 className="text-3xl font-bold text-white mb-4">New here?</h2>
+          <p className="text-white mb-8 text-center max-w-sm">
+            Enter your personal details and start journey with us!
+          </p>
+          <Button
+            className="bg-white text-blue-700 font-bold rounded-full shadow-md px-8 py-2 hover:bg-blue-100 transition"
+            asChild
+          >
+            <Link href="/signup">SIGN UP</Link>
+          </Button>
+        </div>
+        {/* Extra-rounded decorative curve */}
+        <div className="absolute right-[-120px] top-0 h-full w-60 bg-white rounded-l-[140%] hidden xl:block"></div>
+      </motion.div>
+      {/* Right (Form) Panel with Animation */}
+      <motion.div
+        initial={{ x: 80, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.7, type: "spring" }}
+        className="w-full lg:w-1/2 flex flex-col justify-center items-center bg-white"
+      >
+        <div className="w-full max-w-md px-4 py-12">
           <h1 className="text-3xl font-bold mb-8 text-center">Sign in</h1>
-
           {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
-
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="relative">
               <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -115,7 +142,6 @@ export default function LoginPage() {
                 className="pl-10"
               />
             </div>
-
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <Input
@@ -133,7 +159,6 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-
             <div className="relative">
               <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <Select value={role} onValueChange={setRole}>
@@ -147,12 +172,10 @@ export default function LoginPage() {
                 </SelectContent>
               </Select>
             </div>
-
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Login"}
             </Button>
           </form>
-
           <div className="mt-8 text-center">
             <p className="text-gray-600 mb-4">Or Sign in with social platforms</p>
             <div className="flex justify-center space-x-4">
@@ -168,18 +191,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Right Side - Background */}
-      <div className="hidden lg:block lg:w-1/2 bg-blue-600">
-        <div className="h-full flex flex-col justify-center items-center text-white p-12">
-          <h2 className="text-3xl font-bold mb-6">One of us?</h2>
-          <p className="text-lg text-center mb-8">To keep connected with us please login with your personal info.</p>
-          <Button variant="outline" className="text-white border-white hover:bg-blue-700" asChild>
-            <Link href="/signup">Sign Up</Link>
-          </Button>
-        </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
