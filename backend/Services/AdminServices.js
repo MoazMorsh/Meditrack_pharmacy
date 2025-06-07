@@ -137,7 +137,6 @@ async function createOrder(patient_id, items) {
 
 // Order Services
 
-
 // Get All Orders
 async function getAllOrders() {
     const orders = await OrderRepository.getAllOrdersWithItems();
