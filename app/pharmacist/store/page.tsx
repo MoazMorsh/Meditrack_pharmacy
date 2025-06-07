@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import PharmacistSidebar from "@/components/pharmacist/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Edit, Trash, X } from "lucide-react";
@@ -97,7 +96,7 @@ export default function MyStore() {
     setLoading(false);
   };
 
-  // Delete product (robust version!)
+  // Delete product
   const handleDelete = async (id?: number) => {
     if (!id) {
       setStatusMsg({ type: "error", msg: "Product ID missing for delete." });
@@ -107,17 +106,13 @@ export default function MyStore() {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
-
-      // Read text for diagnostics (even if not ok)
       const text = await res.text();
       let errorMsg = "Failed to delete product.";
       if (!res.ok) {
-        // Try to extract JSON message first
         try {
           const json = JSON.parse(text);
           if (json && json.message) errorMsg = json.message;
         } catch {
-          // Not JSON: Check for constraint error in raw HTML/text
           if (text.includes("violates foreign key constraint")) {
             errorMsg = "Cannot delete this product because it is included in an order.";
           } else if (text && text.length < 200) {
@@ -130,14 +125,13 @@ export default function MyStore() {
       setStatusMsg({ type: "success", msg: "Product deleted successfully!" });
       await fetchProducts();
     } catch (err) {
-      // Do not overwrite backend-specific errors
       if (!statusMsg) setStatusMsg({ type: "error", msg: "Failed to delete product." });
       console.error("Delete error:", err);
     }
     setLoading(false);
   };
 
-  // Handle form submit (add or update)
+  // Handle form submit
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -182,7 +176,6 @@ export default function MyStore() {
     setCurrentProduct(null);
   };
 
-  // Auto-hide status message
   useEffect(() => {
     if (statusMsg) {
       const timer = setTimeout(() => setStatusMsg(null), 2500);
@@ -191,38 +184,40 @@ export default function MyStore() {
   }, [statusMsg]);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <PharmacistSidebar />
+    <div className="flex flex-col gap-4">
+      {/* Header and Breadcrumb */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-800">My Store</h1>
+        <div className="flex items-center text-sm text-gray-500">
+          <a href="/" className="hover:text-primary">Home</a>
+          <span className="mx-2">/</span>
+          <span>My Store</span>
+        </div>
+      </div>
 
-      {/* Main content area */}
-      <div className="flex-1 p-8 md:ml-64 w-full">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-800 text-center">My Store</h1>
-          <div className="flex items-center text-sm text-gray-500 justify-center">
-            <a href="/" className="hover:text-primary">
-              Home
-            </a>
-            <span className="mx-2">/</span>
-            <span>My Store</span>
+      {/* Add Product button */}
+      <div className="flex justify-end mb-6">
+        <Button className="flex items-center gap-2" onClick={openAddModal} disabled={loading}>
+          <Plus className="h-4 w-4" />
+          <span>Add Product</span>
+        </Button>
+      </div>
+
+      {/* Product cards grid */}
+      <div
+        className="grid gap-6 w-full"
+        style={{
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+        }}
+      >
+        {loading ? (
+          <div className="col-span-full flex justify-center items-center h-40">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
-        </div>
-
-        {/* Add Product button: centered */}
-        <div className="flex justify-center mb-6">
-          <Button className="flex items-center gap-2" onClick={openAddModal} disabled={loading}>
-            <Plus className="h-4 w-4" />
-            <span>Add Product</span>
-          </Button>
-        </div>
-
-        {/* Product cards grid */}
-        <div
-          className="grid gap-6 w-full"
-          style={{
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          }}
-        >
-          {products.map((product) => (
+        ) : products.length === 0 ? (
+          <div className="col-span-full text-center text-gray-400">No products found.</div>
+        ) : (
+          products.map((product) => (
             <Card
               key={product.id}
               className="rounded-2xl shadow-md border bg-white overflow-hidden transition-transform hover:shadow-lg hover:-translate-y-1 flex flex-col"
@@ -292,17 +287,14 @@ export default function MyStore() {
                 </div>
               </CardContent>
             </Card>
-          ))}
-          {products.length === 0 && !loading && (
-            <div className="col-span-full text-center text-gray-400">No products found.</div>
-          )}
-        </div>
+          ))
+        )}
       </div>
 
       {/* Modal for Add/Edit */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded w-full max-w-lg max-h-screen flex flex-col">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl w-full max-w-lg max-h-screen flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">
                 {currentProduct ? "Edit Product" : "Add Product"}
@@ -311,7 +303,6 @@ export default function MyStore() {
                 <X className="w-5 h-5 text-gray-600 hover:text-red-500" />
               </button>
             </div>
-            {/* Make the form scrollable */}
             <form
               onSubmit={handleSubmit}
               className="grid gap-4 overflow-y-auto"
@@ -322,7 +313,7 @@ export default function MyStore() {
                 <Input name="name" defaultValue={currentProduct?.name || ""} required />
               </div>
               <div>
-                <Label>generic_name</Label>
+                <Label>Generic Name</Label>
                 <Input name="generic_name" defaultValue={currentProduct?.generic_name || ""} required />
               </div>
               <div>

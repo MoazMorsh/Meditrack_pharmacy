@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState, ChangeEvent, FormEvent } from "react"
-import PharmacistSidebar from "@/components/pharmacist/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
@@ -12,7 +11,7 @@ const API_BASE = "http://localhost:8081/pharmacist"
 
 export interface Branch {
   branch_id: number
-  pharmacy_id: number // <<<<<<<< Added here
+  pharmacy_id: number
   branch_name: string
   address: string
   phone: string
@@ -61,7 +60,7 @@ export default function Branches() {
   function openAddDialog() {
     setEditingBranch(null)
     setForm({
-      pharmacy_id: 1, // Default value; change as needed
+      pharmacy_id: 1,
       branch_name: "",
       address: "",
       phone: "",
@@ -113,14 +112,11 @@ export default function Branches() {
     try {
       let res: Response
       if (editingBranch) {
-        res = await fetch(
-          `${API_BASE}/branch/${editingBranch.branch_id}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(form),
-          }
-        )
+        res = await fetch(`${API_BASE}/branch/${editingBranch.branch_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        })
       } else {
         res = await fetch(`${API_BASE}/branch`, {
           method: "POST",
@@ -157,191 +153,184 @@ export default function Branches() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <PharmacistSidebar />
-      <div className="flex-1 p-8 md:ml-64">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-800">My Branches</h1>
-          <div className="flex items-center text-sm text-gray-500">
-            <a href="/" className="hover:text-primary">
-              Home
-            </a>
-            <span className="mx-2">/</span>
-            <span>My Branches</span>
-          </div>
+    <div className="flex flex-col gap-4">
+      {/* Header and Breadcrumb */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-800">Branches</h1>
+        <div className="flex items-center text-sm text-gray-500">
+          <a href="/" className="hover:text-primary transition-colors">Home</a>
+          <span className="mx-2">/</span>
+          <span>Branches</span>
         </div>
-        <Button className="mb-6 flex items-center gap-2" onClick={openAddDialog}>
+      </div>
+
+      {/* Add Branch Button */}
+      <div className="flex justify-end mb-6">
+        <Button className="flex items-center gap-2" onClick={openAddDialog}>
           <Plus className="h-4 w-4" />
           <span>Add Branch</span>
         </Button>
-        {loading ? (
-          <div className="text-center text-gray-400 py-8">Loading branches...</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {branches.map((branch) => (
-              <Card key={branch.branch_id} className="overflow-hidden transition-transform hover:shadow-md hover:-translate-y-1">
-                <CardContent className="p-6">
-                  <h3 className="font-bold text-lg mb-4 pb-2 border-b">{branch.branch_name}</h3>
-                  <div className="space-y-3 text-sm text-gray-600 mb-4">
-                    <p className="flex items-start gap-2">
-                      <span className="text-gray-400 mt-0.5">
-                        <MapPin className="h-4 w-4" />
-                      </span>
-                      <span>{branch.address}</span>
-                    </p>
-                    <p className="flex items-start gap-2">
-                      <span className="text-gray-400 mt-0.5">
-                        <Phone className="h-4 w-4" />
-                      </span>
-                      <span>{branch.phone}</span>
-                    </p>
-                    <p className="flex items-start gap-2">
-                      <span className="text-gray-400 mt-0.5">
-                        <Mail className="h-4 w-4" />
-                      </span>
-                      <span>{branch.email}</span>
-                    </p>
-                    <p className="flex items-start gap-2">
-                      <span className="text-gray-400 mt-0.5">
-                        <Globe className="h-4 w-4" />
-                      </span>
-                      <span>{branch.website}</span>
-                    </p>
-                    <p className="flex items-start gap-2">
-                      <span className="text-gray-400 mt-0.5">
-                        <Calendar className="h-4 w-4" />
-                      </span>
-                      <span>
-                        Created:{" "}
-                        {branch.created ||
-                          branch.created_at?.split("T")[0] ||
-                          branch.createdAt?.split("T")[0] ||
-                          "N/A"}
-                      </span>
-                    </p>
-                    <p className="flex items-start gap-2">
-                      <span className="text-gray-400 mt-0.5 font-bold">Pharmacy ID:</span>
-                      <span>{branch.pharmacy_id}</span>
-                    </p>
-                  </div>
-                  <div className="flex justify-between">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1"
-                      onClick={() => openEditDialog(branch)}
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="flex items-center gap-1"
-                      onClick={() => handleDelete(branch)}
-                    >
-                      <Trash className="h-3.5 w-3.5" />
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-        {/* Add/Edit Dialog */}
-        <Dialog open={showDialog} onOpenChange={closeDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingBranch ? "Edit Branch" : "Add Branch"}
-              </DialogTitle>
-              <DialogClose />
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs mb-1">Pharmacy ID</label>
-                <Input
-                  name="pharmacy_id"
-                  type="number"
-                  placeholder="Pharmacy ID"
-                  value={form.pharmacy_id}
-                  onChange={handleFormChange}
-                  required
-                  min={1}
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1">Branch Name</label>
-                <Input
-                  name="branch_name"
-                  placeholder="Branch Name"
-                  value={form.branch_name}
-                  onChange={handleFormChange}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1">Address</label>
-                <Input
-                  name="address"
-                  placeholder="Address"
-                  value={form.address}
-                  onChange={handleFormChange}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1">Phone</label>
-                <Input
-                  name="phone"
-                  placeholder="Phone"
-                  value={form.phone}
-                  onChange={handleFormChange}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1">Email</label>
-                <Input
-                  name="email"
-                  type="email"
-                  placeholder="Email"
-                  value={form.email}
-                  onChange={handleFormChange}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1">Website</label>
-                <Input
-                  name="website"
-                  placeholder="Website"
-                  value={form.website}
-                  onChange={handleFormChange}
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1">Location</label>
-                <Input
-                  name="location"
-                  placeholder="Location"
-                  value={form.location}
-                  onChange={handleFormChange}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" type="button" onClick={closeDialog}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  {editingBranch ? "Save Changes" : "Add Branch"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
+
+      {/* Branches Grid */}
+      {loading ? (
+        <div className="text-center text-gray-400 py-8">Loading branches...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {branches.map((branch) => (
+            <Card key={branch.branch_id} className="overflow-hidden transition-transform hover:shadow-lg hover:-translate-y-1">
+              <CardContent className="p-6">
+                <h3 className="font-bold text-lg mb-4 pb-2 border-b">{branch.branch_name}</h3>
+                <div className="space-y-3 text-sm text-gray-600 mb-4">
+                  <p className="flex items-start gap-2">
+                    <span className="text-gray-400 mt-0.5"><MapPin className="h-4 w-4" /></span>
+                    <span>{branch.address}</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="text-gray-400 mt-0.5"><Phone className="h-4 w-4" /></span>
+                    <span>{branch.phone}</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="text-gray-400 mt-0.5"><Mail className="h-4 w-4" /></span>
+                    <span>{branch.email}</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="text-gray-400 mt-0.5"><Globe className="h-4 w-4" /></span>
+                    <span>{branch.website}</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="text-gray-400 mt-0.5"><Calendar className="h-4 w-4" /></span>
+                    <span>
+                      Created:{" "}
+                      {branch.created ||
+                        branch.created_at?.split("T")[0] ||
+                        branch.createdAt?.split("T")[0] ||
+                        "N/A"}
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="text-gray-400 mt-0.5 font-bold">Pharmacy ID:</span>
+                    <span>{branch.pharmacy_id}</span>
+                  </p>
+                </div>
+                <div className="flex justify-between">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                    onClick={() => openEditDialog(branch)}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="flex items-center gap-1"
+                    onClick={() => handleDelete(branch)}
+                  >
+                    <Trash className="h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={showDialog} onOpenChange={closeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingBranch ? "Edit Branch" : "Add Branch"}
+            </DialogTitle>
+            <DialogClose />
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <div>
+              <label className="block text-xs mb-1">Pharmacy ID</label>
+              <Input
+                name="pharmacy_id"
+                type="number"
+                placeholder="Pharmacy ID"
+                value={form.pharmacy_id}
+                onChange={handleFormChange}
+                required
+                min={1}
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1">Branch Name</label>
+              <Input
+                name="branch_name"
+                placeholder="Branch Name"
+                value={form.branch_name}
+                onChange={handleFormChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1">Address</label>
+              <Input
+                name="address"
+                placeholder="Address"
+                value={form.address}
+                onChange={handleFormChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1">Phone</label>
+              <Input
+                name="phone"
+                placeholder="Phone"
+                value={form.phone}
+                onChange={handleFormChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1">Email</label>
+              <Input
+                name="email"
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={handleFormChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1">Website</label>
+              <Input
+                name="website"
+                placeholder="Website"
+                value={form.website}
+                onChange={handleFormChange}
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1">Location</label>
+              <Input
+                name="location"
+                placeholder="Location"
+                value={form.location}
+                onChange={handleFormChange}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" type="button" onClick={closeDialog}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {editingBranch ? "Save Changes" : "Add Branch"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
