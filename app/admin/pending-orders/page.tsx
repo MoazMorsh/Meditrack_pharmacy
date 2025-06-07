@@ -4,20 +4,20 @@ import { useState, useEffect } from "react"
 import { User, Search, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-interface Order {
-  id: string
-  user: string
-  date: string
-  status: string
-  items: OrderItem[]
-  total: number
-}
-
 interface OrderItem {
   id: string
-  name: string
+  medicine_id: string
   quantity: number
   price: number
+}
+
+interface Order {
+  id: string
+  patient_id: string
+  total_price: number
+  status: string
+  created_at?: string
+  order_items: OrderItem[]
 }
 
 export default function PendingOrders() {
@@ -25,97 +25,56 @@ export default function PendingOrders() {
   const [loading, setLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Simulate fetching orders from API
     const fetchOrders = async () => {
+      setLoading(true)
+      setError(null)
       try {
-        // In a real app, this would be an API call
-        // const response = await fetch('/api/orders?status=pending')
-        // const data = await response.json()
-
-        // Mock data
-        const mockOrders = [
-          {
-            id: "ORD-1234",
-            user: "John Doe",
-            date: "01-10-2023",
-            status: "Pending",
-            items: [
-              { id: "ITEM-1", name: "Paracetamol 500mg", quantity: 2, price: 5.99 },
-              { id: "ITEM-2", name: "Vitamin C", quantity: 1, price: 8.5 },
-            ],
-            total: 20.48,
-          },
-          {
-            id: "ORD-5678",
-            user: "Jane Smith",
-            date: "01-11-2023",
-            status: "Pending",
-            items: [
-              { id: "ITEM-3", name: "Amoxicillin", quantity: 1, price: 12.99 },
-              { id: "ITEM-4", name: "Multivitamin", quantity: 1, price: 15.75 },
-            ],
-            total: 28.74,
-          },
-          {
-            id: "ORD-9012",
-            user: "Robert Johnson",
-            date: "01-12-2023",
-            status: "Pending",
-            items: [
-              { id: "ITEM-5", name: "Ibuprofen", quantity: 1, price: 6.99 },
-              { id: "ITEM-6", name: "First Aid Kit", quantity: 1, price: 24.99 },
-            ],
-            total: 31.98,
-          },
-          {
-            id: "ORD-3456",
-            user: "Emily Davis",
-            date: "01-13-2023",
-            status: "Pending",
-            items: [{ id: "ITEM-7", name: "Blood Pressure Monitor", quantity: 1, price: 49.99 }],
-            total: 49.99,
-          },
-          {
-            id: "ORD-7890",
-            user: "Michael Wilson",
-            date: "01-14-2023",
-            status: "Pending",
-            items: [
-              { id: "ITEM-8", name: "Allergy Relief Spray", quantity: 1, price: 11.99 },
-              { id: "ITEM-9", name: "Hand Sanitizer", quantity: 3, price: 3.99 },
-            ],
-            total: 23.96,
-          },
-        ]
-
-        setOrders(mockOrders)
-        setLoading(false)
-      } catch (error) {
-        console.error("Error fetching orders:", error)
-        setLoading(false)
+        const res = await fetch("http://localhost:8081/admin/pending-orders", { cache: "no-store" })
+        if (!res.ok) throw new Error("Failed to fetch orders")
+        const data = await res.json()
+        setOrders(data)
+      } catch (err: any) {
+        setError(err.message || "Unknown error")
       }
+      setLoading(false)
     }
-
     fetchOrders()
   }, [])
 
+  // Open order modal
   const viewOrderDetails = (order: Order) => {
     setSelectedOrder(order)
     setIsModalOpen(true)
   }
 
+  // Close modal
   const closeModal = () => {
     setIsModalOpen(false)
     setSelectedOrder(null)
   }
 
-  const updateOrderStatus = (id: string, newStatus: string) => {
-    setOrders(orders.map((order) => (order.id === id ? { ...order, status: newStatus } : order)))
-
-    if (selectedOrder && selectedOrder.id === id) {
-      setSelectedOrder({ ...selectedOrder, status: newStatus })
+  // Update order status locally and in the backend
+  const updateOrderStatus = async (id: string, newStatus: string) => {
+    try {
+      const res = await fetch(`http://localhost:8081/admin/orders/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!res.ok) throw new Error("Failed to update order status")
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.id === id ? { ...order, status: newStatus } : order
+        )
+      )
+      if (selectedOrder && selectedOrder.id === id) {
+        setSelectedOrder({ ...selectedOrder, status: newStatus })
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to update order status")
     }
   }
 
@@ -127,10 +86,18 @@ export default function PendingOrders() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="text-center text-red-600 mt-8">
+        Error loading orders: {error}
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Pending Orders</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Pending Approval Orders</h1>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -149,49 +116,43 @@ export default function PendingOrders() {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Order ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Patient</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-gray-200 dark:bg-gray-600 rounded-full">
-                        <User className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{order.user}</div>
-                      </div>
-                    </div>
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{order.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{order.date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{order.patient_id}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${order.total_price.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                       {order.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <Button variant="outline" size="sm" className="mr-2" onClick={() => viewOrderDetails(order)}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => viewOrderDetails(order)}>
                       View
                     </Button>
-                    <Button size="sm" onClick={() => updateOrderStatus(order.id, "Processing")}>
-                      Process
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => updateOrderStatus(order.id, "approved")}
+                      disabled={order.status !== "pending_approval"}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => updateOrderStatus(order.id, "rejected")}
+                      disabled={order.status !== "pending_approval"}
+                    >
+                      Reject
                     </Button>
                   </td>
                 </tr>
@@ -206,7 +167,9 @@ export default function PendingOrders() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Order Details: {selectedOrder.id}</h2>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+                Order Details: {selectedOrder.id}
+              </h2>
               <button
                 onClick={closeModal}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
@@ -225,10 +188,7 @@ export default function PendingOrders() {
             <div className="p-4">
               <div className="mb-4">
                 <p className="text-gray-700 dark:text-gray-300">
-                  <strong>Customer:</strong> {selectedOrder.user}
-                </p>
-                <p className="text-gray-700 dark:text-gray-300">
-                  <strong>Date:</strong> {selectedOrder.date}
+                  <strong>Patient ID:</strong> {selectedOrder.patient_id}
                 </p>
                 <p className="text-gray-700 dark:text-gray-300">
                   <strong>Status:</strong>
@@ -244,7 +204,7 @@ export default function PendingOrders() {
                     <thead className="bg-gray-100 dark:bg-gray-800">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Item
+                          Medicine ID
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Quantity
@@ -258,10 +218,10 @@ export default function PendingOrders() {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
-                      {selectedOrder.items.map((item) => (
+                      {selectedOrder.order_items.map((item) => (
                         <tr key={item.id}>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {item.name}
+                            {item.medicine_id}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             {item.quantity}
@@ -277,14 +237,11 @@ export default function PendingOrders() {
                     </tbody>
                     <tfoot className="bg-gray-100 dark:bg-gray-800">
                       <tr>
-                        <td
-                          colSpan={3}
-                          className="px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white"
-                        >
+                        <td colSpan={3} className="px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white">
                           Total:
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 dark:text-white">
-                          ${selectedOrder.total.toFixed(2)}
+                          ${selectedOrder.total_price.toFixed(2)}
                         </td>
                       </tr>
                     </tfoot>
@@ -295,7 +252,19 @@ export default function PendingOrders() {
                 <Button variant="outline" onClick={closeModal}>
                   Close
                 </Button>
-                <Button onClick={() => updateOrderStatus(selectedOrder.id, "Processing")}>Process Order</Button>
+                <Button
+                  onClick={() => updateOrderStatus(selectedOrder.id, "approved")}
+                  disabled={selectedOrder.status !== "pending_approval"}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => updateOrderStatus(selectedOrder.id, "rejected")}
+                  disabled={selectedOrder.status !== "pending_approval"}
+                >
+                  Reject
+                </Button>
               </div>
             </div>
           </div>

@@ -81,7 +81,7 @@ async function getPendingOrders() {
             )
         `)
     .eq("status", "pending_approval")
-    .single();
+    ;
 
   if (error) throw new Error(error.message);
 

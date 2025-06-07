@@ -19,7 +19,7 @@ interface Order {
 
 interface OrderItem {
   id: string
-  productName: string
+  productName: string // will be medicine_id for now, can be medicine name if you update backend or fetch names
   quantity: number
   unitPrice: number
   subtotal: number
@@ -63,64 +63,35 @@ export default function OrderStatusPage() {
       })
   }, [])
 
-  // Replace this with your real order API if available
+  // Fetch real orders for this user from your API
   const fetchOrders = async (userId: string, token: string) => {
     try {
-      // Mock data for demonstration
-      setTimeout(() => {
-        setOrders([
-          {
-            id: "ORD-1234",
-            patientId: userId,
-            totalAmount: 78.97,
-            status: "Delivered",
-            createdAt: "2023-05-15T10:30:00Z",
-            items: [
-              {
-                id: "ITEM-1",
-                productName: "Vitamin C 1000mg",
-                quantity: 2,
-                unitPrice: 12.99,
-                subtotal: 25.98,
-                createdAt: "2023-05-15T10:30:00Z",
-              },
-              {
-                id: "ITEM-2",
-                productName: "Pain Relief Tablets",
-                quantity: 1,
-                unitPrice: 7.49,
-                subtotal: 7.49,
-                createdAt: "2023-05-15T10:30:00Z",
-              },
-            ],
-          },
-          {
-            id: "ORD-5678",
-            patientId: userId,
-            totalAmount: 45.5,
-            status: "Processing",
-            createdAt: "2023-05-20T14:45:00Z",
-            items: [
-              {
-                id: "ITEM-3",
-                productName: "First Aid Kit",
-                quantity: 1,
-                unitPrice: 24.99,
-                subtotal: 24.99,
-                createdAt: "2023-05-20T14:45:00Z",
-              },
-              {
-                id: "ITEM-4",
-                productName: "Hand Sanitizer",
-                quantity: 3,
-                unitPrice: 3.99,
-                subtotal: 11.97,
-                createdAt: "2023-05-20T14:45:00Z",
-              },
-            ],
-          },
-        ])
-      }, 1000)
+      const response = await fetch(`http://localhost:8081/patient/patient-order/${userId}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      })
+      if (!response.ok) throw new Error("Failed to fetch orders")
+      const data = await response.json()
+
+      setOrders(
+        (data || []).map((order: any) => ({
+          id: order.id?.toString(),
+          patientId: order.patient_id?.toString(),
+          totalAmount: order.total_price || 0,
+          status: order.status || "",
+          createdAt: order.created_at || order.createdAt || "",
+          items: (order.order_items || []).map((item: any) => ({
+            id: item.id?.toString(),
+            productName: item.medicine_id?.toString(), // If you want to show medicine name, fetch it separately or join in backend
+            quantity: item.quantity || 0,
+            unitPrice: item.price || 0,
+            subtotal: (item.price || 0) * (item.quantity || 0),
+            createdAt: order.created_at || "",
+          })),
+        }))
+      )
     } catch (error) {
       console.error("Error fetching orders:", error)
       throw error
@@ -149,7 +120,7 @@ export default function OrderStatusPage() {
           patientId: prescription.patientId?.toString(),
           status: prescription.status || "Pending",
           imageUrl: prescription.image || prescription.imageUrl || "/placeholder.svg?height=400&width=300",
-          created_at: prescription.created_at || prescription.created_at || "",
+          created_at: prescription.created_at || prescription.createdAt || "",
         }))
       )
     } catch (error) {
@@ -178,7 +149,10 @@ export default function OrderStatusPage() {
       case "approved":
         return "bg-green-100 text-green-800"
       case "pending":
+      case "pending_approval":
         return "bg-yellow-100 text-yellow-800"
+      case "rejected":
+        return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -246,10 +220,61 @@ export default function OrderStatusPage() {
           </TabsTrigger>
         </TabsList>
 
+        {/* Orders tab */}
         <TabsContent value="orders">
-          {/* ... orders tab unchanged ... */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Your Orders</h2>
+              {orders.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500">You don't have any orders yet</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b">
+                        <th className="px-4 py-3 text-left">Order ID</th>
+                        <th className="px-4 py-3 text-left">Status</th>
+                        <th className="px-4 py-3 text-left">Total Amount</th>
+                        <th className="px-4 py-3 text-left">Created At</th>
+                        <th className="px-4 py-3 text-left">Items</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr key={order.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-3">{order.id}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">${order.totalAmount.toFixed(2)}</td>
+                          <td className="px-4 py-3">{formatDate(order.createdAt)}</td>
+                          <td className="px-4 py-3">
+                            <ul className="list-disc pl-4">
+                              {order.items.map(item => (
+                                <li key={item.id}>
+                                  <span className="font-medium">{item.productName}</span>
+                                  {" × "}{item.quantity}{" "}
+                                  (${item.unitPrice.toFixed(2)} each)
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
+        {/* Prescriptions tab (unchanged) */}
         <TabsContent value="prescriptions">
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-6">

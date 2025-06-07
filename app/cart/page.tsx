@@ -29,8 +29,11 @@ export default function CartPage() {
   const [orderLoading, setOrderLoading] = useState(false)
   const [orderError, setOrderError] = useState("")
 
-  // TODO: Replace with real logged-in patient id
-  const patientId = 1
+  // 1. Get patientId of logged-in user from localStorage
+  let patientId = null
+  if (typeof window !== "undefined") {
+    patientId = localStorage.getItem("userId")
+  }
 
   const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0)
   const shipping = 5.99
@@ -119,11 +122,12 @@ export default function CartPage() {
     }))
 
     try {
+      // 2. Use logged-in user id as patient_id in the request
       const response = await fetch("http://localhost:8081/patient/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          patient_id: patientId,
+          patient_id: patientId, // updated to use logged-in user's id!
           items,
           delivery_address: delivery_address,
           shipping,
