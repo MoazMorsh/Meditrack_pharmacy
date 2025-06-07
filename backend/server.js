@@ -9,6 +9,7 @@ const PORT = 8081;
 const authController = require('./Controllers/AuthController');
 const adminController = require('./Controllers/AdminController');
 const patientController = require('./Controllers/PatientController');
+const pharmacistController = require('./Controllers/PharmacistController');
 
 // Middleware
 app.use(cors());
@@ -34,6 +35,7 @@ app.get('/api/test', (req, res) => {
 app.use('/auth', authController);
 app.use('/admin', adminController);
 app.use('/patient', patientController);
+app.use('/pharmacist', pharmacistController);
 
 // Optional: fallback for undefined routes
 app.use((req, res) => {

@@ -45,6 +45,21 @@ async function createpharmacists(pharmacist) {
     return data;                             
 }
 
+// update admin (update profile)
+
+async function updatePharmacist(id, updates) {
+    const {data, error} = await supabase
+    .from("pharmacists")
+    .update([updates])
+    .eq("id", id)
+    .single();
+  
+    if(error) throw new Error(error.message);
+  
+    return data;
+  }
+  
+
 async function removePharmacist(id) {
     const { error } = await supabase
     .from('pharmacists')
@@ -59,4 +74,5 @@ module.exports = {
     getPharmacistByEmail,
     createpharmacists,
     removePharmacist,
+    updatePharmacist
 }
