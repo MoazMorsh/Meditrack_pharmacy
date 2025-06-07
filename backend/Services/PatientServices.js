@@ -80,7 +80,7 @@ async function createOrder(patient_id, items) {
   }
 
   // Decide the order status based on whether any medicine needs approval
-  const status = requiresApproval ? "pending_approval" : "pending";
+  const status = requiresApproval ? "Pending" : "Pending";
 
   // Create the order
   const order = await OrderRepository.createOrder({

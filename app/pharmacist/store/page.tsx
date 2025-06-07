@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 const API_BASE = "http://localhost:8081/admin/medicines";
+const PAGE_SIZE = 6; // Change for more/less per page
 
 interface Product {
   id?: number;
@@ -30,6 +31,10 @@ export default function MyStore() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  // Search & pagination
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch products from backend
   const fetchProducts = async () => {
@@ -176,6 +181,33 @@ export default function MyStore() {
     setCurrentProduct(null);
   };
 
+  // Search logic - safe for all fields
+  const filteredProducts = products.filter((product) => {
+    if (!search.trim()) return true;
+    const searchTerm = search.trim().toLowerCase();
+    return (
+      (product.name?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.generic_name?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.category?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.type?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.active_ingredients?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.storage_conditions?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.img_URL?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.price != null ? product.price.toString() : "").includes(searchTerm) ||
+      (product.quantity != null ? product.quantity.toString() : "").includes(searchTerm) ||
+      ((product.prescription_required ? "required" : "not required").includes(searchTerm))
+    );
+  });
+
+  // Pagination logic
+  const pageCount = Math.ceil(filteredProducts.length / PAGE_SIZE);
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset page if search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   useEffect(() => {
     if (statusMsg) {
       const timer = setTimeout(() => setStatusMsg(null), 2500);
@@ -186,21 +218,29 @@ export default function MyStore() {
   return (
     <div className="flex flex-col gap-4">
       {/* Header and Breadcrumb */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">My Store</h1>
-        <div className="flex items-center text-sm text-gray-500">
-          <a href="/" className="hover:text-primary">Home</a>
-          <span className="mx-2">/</span>
-          <span>My Store</span>
+      <div className="mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">My Store</h1>
+          <div className="flex items-center text-sm text-gray-500">
+            <a href="/" className="hover:text-primary">Home</a>
+            <span className="mx-2">/</span>
+            <span>My Store</span>
+          </div>
         </div>
-      </div>
-
-      {/* Add Product button */}
-      <div className="flex justify-end mb-6">
-        <Button className="flex items-center gap-2" onClick={openAddModal} disabled={loading}>
-          <Plus className="h-4 w-4" />
-          <span>Add Product</span>
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Input
+            type="search"
+            placeholder="Search products..."
+            className="w-full md:w-72"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+          <Button className="flex items-center gap-2" onClick={openAddModal} disabled={loading}>
+            <Plus className="h-4 w-4" />
+            <span>Add Product</span>
+          </Button>
+        </div>
       </div>
 
       {/* Product cards grid */}
@@ -214,10 +254,10 @@ export default function MyStore() {
           <div className="col-span-full flex justify-center items-center h-40">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
-        ) : products.length === 0 ? (
+        ) : paginatedProducts.length === 0 ? (
           <div className="col-span-full text-center text-gray-400">No products found.</div>
         ) : (
-          products.map((product) => (
+          paginatedProducts.map((product) => (
             <Card
               key={product.id}
               className="rounded-2xl shadow-md border bg-white overflow-hidden transition-transform hover:shadow-lg hover:-translate-y-1 flex flex-col"
@@ -291,6 +331,38 @@ export default function MyStore() {
         )}
       </div>
 
+      {/* Pagination controls */}
+      {pageCount > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Prev
+          </Button>
+          {[...Array(pageCount)].map((_, idx) => (
+            <Button
+              size="sm"
+              variant={currentPage === idx + 1 ? "default" : "outline"}
+              key={idx}
+              onClick={() => setCurrentPage(idx + 1)}
+            >
+              {idx + 1}
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
+            disabled={currentPage === pageCount}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       {/* Modal for Add/Edit */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
@@ -335,11 +407,25 @@ export default function MyStore() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Price</Label>
-                  <Input name="price" type="number" step="0.01" defaultValue={currentProduct?.price || 0} required />
+                  <Input
+                    name="price"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9.]*"
+                    defaultValue={currentProduct?.price ?? ""}
+                    required
+                  />
                 </div>
                 <div>
                   <Label>Quantity</Label>
-                  <Input name="quantity" type="number" defaultValue={currentProduct?.quantity || 0} required />
+                  <Input
+                    name="quantity"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    defaultValue={currentProduct?.quantity ?? ""}
+                    required
+                  />
                 </div>
               </div>
               <div className="flex items-center space-x-2">

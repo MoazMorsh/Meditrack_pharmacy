@@ -28,8 +28,8 @@ const navLinks = [
   { name: "My Store", href: "/pharmacist/store", icon: ShoppingBag },
   { name: "Branches", href: "/pharmacist/branches", icon: Building },
   { name: "Orders (Received / Pending)", href: "/pharmacist/orders", icon: Clock },
-  { name: "Missing Medicines Requests", href: "/pharmacist/missing-medicines", icon: MessageSquareWarning },
-  { name: "Suppliers", href: "/pharmacist/suppliers", icon: Store },
+  // { name: "Missing Medicines Requests", href: "/pharmacist/missing-medicines", icon: MessageSquareWarning },
+  { name: "Pharmacy", href: "/pharmacist/suppliers", icon: Store },
   { name: "Home", href: "/", icon: Home },
 ]
 

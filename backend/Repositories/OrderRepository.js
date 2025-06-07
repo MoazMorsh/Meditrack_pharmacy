@@ -67,7 +67,7 @@ async function getPatientOrders(patient_id) {
   return data;
 }
 
-// get pending_approval orders
+// get Pending orders
 async function getPendingOrders() {
   const { data, error } = await supabase
     .from("orders")
@@ -80,7 +80,7 @@ async function getPendingOrders() {
         price
             )
         `)
-    .eq("status", "pending_approval")
+    .eq("status", "Pending")
     ;
 
   if (error) throw new Error(error.message);
@@ -122,11 +122,11 @@ async function updateOrder(id, updates) {
 
   return data;
 }
-// Update Order
+// Approve Order
 async function approveOrder(id) {
   const { data, error } = await supabase
     .from("orders")
-    .update({ status: "approved" })
+    .update({ status: "Approved" })
     .eq("id", id)
     .single();
 
@@ -134,11 +134,11 @@ async function approveOrder(id) {
 
   return data;
 }
-// Update Order
+// Reject Order
 async function rejectOrder(id) {
   const { data, error } = await supabase
     .from("orders")
-    .update({ status: "rejected" })
+    .update({ status: "Rejected" })
     .eq("id", id)
     .single();
 

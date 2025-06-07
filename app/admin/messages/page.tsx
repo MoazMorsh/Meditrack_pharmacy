@@ -24,28 +24,25 @@ export default function Messages() {
       try {
         setLoading(true)
         setError(null)
-
-        // Change the endpoint if your all-prescriptions route is different
+        // Fetch all pending prescriptions (adjust this endpoint if needed)
         const response = await fetch("http://localhost:8081/admin/PendingPrescription")
         if (!response.ok) {
           const errorData = await response.json().catch(() => null)
           throw new Error(errorData?.message || "Failed to fetch prescriptions")
         }
-
         const data = await response.json()
-        // Defensive mapping: ensure status is a string and always present
-        setPrescriptions(data.map((p: any) => ({
-          ...p,
-          status: (p.status || "Pending").toString()
-        })))
+        setPrescriptions(
+          data.map((p: any) => ({
+            ...p,
+            status: (p.status || "Pending").toString(),
+          }))
+        )
       } catch (err: any) {
-        console.error("Error fetching prescriptions:", err)
         setError(err.message || "Unknown error")
       } finally {
         setLoading(false)
       }
     }
-
     fetchPrescriptions()
   }, [])
 
@@ -59,45 +56,50 @@ export default function Messages() {
     setSelectedPrescription(null)
   }
 
+  // Update prescription status using the pharmacist APIs
   const updatePrescriptionStatus = async (id: string, newStatus: string) => {
+    let endpoint = ""
+    let method = "PUT"
+
+    if (newStatus === "Approved") {
+      endpoint = `http://localhost:8081/pharmacist/approve-prescription/${id}`
+    } else if (newStatus === "Rejected") {
+      endpoint = `http://localhost:8081/pharmacist/reject-prescription/${id}`
+    } else if (newStatus === "Pending") {
+      // If you want to reset to pending, just update state, no backend call
+      setPrescriptions((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p))
+      )
+      return
+    }
+
     try {
       // Optimistic UI update
       setPrescriptions((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p)),
+        prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p))
       )
 
-      // Send update request to backend
-      const response = await fetch(`http://localhost:8081/admin/UpdatePrescriptionStatus/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to update status")
+      if (endpoint) {
+        const response = await fetch(endpoint, { method })
+        if (!response.ok) {
+          throw new Error("Failed to update status")
+        }
       }
     } catch (err) {
-      console.error("Error updating status:", err)
       alert("Failed to update status. Please try again.")
-      // You might want to refetch the data here in a real app
+      // Rollback UI (fetch again or revert locally if needed)
     }
   }
 
   const deletePrescription = async (id: string) => {
     if (!confirm("Are you sure you want to delete this prescription?")) return
-
     try {
       const response = await fetch(`http://localhost:8081/admin/DeletePrescription/${id}`, {
         method: "DELETE",
       })
-
-      if (!response.ok) {
-        throw new Error("Failed to delete prescription")
-      }
-
+      if (!response.ok) throw new Error("Failed to delete prescription")
       setPrescriptions((prev) => prev.filter((p) => p.id !== id))
     } catch (err) {
-      console.error("Error deleting prescription:", err)
       alert("Failed to delete prescription. Please try again.")
     }
   }
@@ -112,7 +114,6 @@ export default function Messages() {
     })
   }
 
-  // Defensive status check: always handle as string
   const getStatusClass = (status: any) => {
     const val = (status || "").toString().toLowerCase()
     switch (val) {

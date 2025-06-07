@@ -21,12 +21,18 @@ interface Product {
   storage_conditions?: string | null;
 }
 
+const PAGE_SIZE = 6; // Number of products per page
+
 export default function MyStore() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Search & pagination
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const API_BASE = "http://localhost:8081/admin/medicines";
 
@@ -102,11 +108,8 @@ export default function MyStore() {
     if (!confirm("Delete this product?")) return;
     setLoading(true);
     try {
-      console.log("Attempting DELETE for product id:", id);
       const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
       const text = await res.text();
-      console.log("Delete response status:", res.status);
-      console.log("Delete response body:", text);
 
       if (!res.ok) {
         let errorMsg = "Failed to delete product.";
@@ -175,6 +178,33 @@ export default function MyStore() {
     setCurrentProduct(null);
   };
 
+  // Search logic - safe for all fields
+  const filteredProducts = products.filter((product) => {
+    if (!search.trim()) return true;
+    const searchTerm = search.trim().toLowerCase();
+    return (
+      (product.name?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.generic_name?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.category?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.type?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.active_ingredients?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.storage_conditions?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.img_URL?.toLowerCase() ?? "").includes(searchTerm) ||
+      (product.price != null ? product.price.toString() : "").includes(searchTerm) ||
+      (product.quantity != null ? product.quantity.toString() : "").includes(searchTerm) ||
+      ((product.prescription_required ? "required" : "not required").includes(searchTerm))
+    );
+  });
+
+  // Pagination
+  const pageCount = Math.ceil(filteredProducts.length / PAGE_SIZE);
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset page if search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   // Auto-hide status message
   useEffect(() => {
     if (statusMsg) {
@@ -185,15 +215,25 @@ export default function MyStore() {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold">My Store</h1>
-        <Button onClick={openAddModal} disabled={loading}>
-          <Plus className="h-4 w-4 mr-2" /> Add Product
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Input
+            type="search"
+            placeholder="Search products..."
+            className="w-full md:w-72"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+          <Button onClick={openAddModal} disabled={loading}>
+            <Plus className="h-4 w-4 mr-2" /> Add Product
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product) => (
+        {paginatedProducts.map((product) => (
           <div key={product.id} className="bg-white p-4 rounded shadow">
             <img
               src={product.img_URL || "/placeholder.svg?height=300&width=300"}
@@ -207,7 +247,7 @@ export default function MyStore() {
             <p>generic_name: {product.generic_name}</p>
             <p>Category: {product.category}</p>
             <p>Type: {product.type}</p>
-            <p>Price: ${product.price.toFixed(2)}</p>
+            <p>Price: ${product.price?.toFixed(2)}</p>
             <p>Quantity: {product.quantity}</p>
             <p>Active Ingredients: {product.active_ingredients ?? "-"}</p>
             <p>Storage Conditions: {product.storage_conditions ?? "-"}</p>
@@ -223,6 +263,38 @@ export default function MyStore() {
           </div>
         ))}
       </div>
+
+      {/* Pagination controls */}
+      {pageCount > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Prev
+          </Button>
+          {[...Array(pageCount)].map((_, idx) => (
+            <Button
+              size="sm"
+              variant={currentPage === idx + 1 ? "default" : "outline"}
+              key={idx}
+              onClick={() => setCurrentPage(idx + 1)}
+            >
+              {idx + 1}
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
+            disabled={currentPage === pageCount}
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
@@ -268,11 +340,25 @@ export default function MyStore() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Price</Label>
-                  <Input name="price" type="number" step="0.01" defaultValue={currentProduct?.price || 0} required />
+                  <Input
+                    name="price"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9.]*"
+                    defaultValue={currentProduct?.price ?? ""}
+                    required
+                  />
                 </div>
                 <div>
                   <Label>Quantity</Label>
-                  <Input name="quantity" type="number" defaultValue={currentProduct?.quantity || 0} required />
+                  <Input
+                    name="quantity"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    defaultValue={currentProduct?.quantity ?? ""}
+                    required
+                  />
                 </div>
               </div>
               <div className="flex items-center space-x-2">

@@ -110,6 +110,29 @@ router.get("/PendingPrescription", async (req, res, next) => {
   }
 })
 
+// Approve Prescription
+router.put("/approve-prescription/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const approved = await AdminServices.approvePrescription(id);
+    res.status(200).json("Prescription Approved Successfully", approved);
+  } catch (err) {
+    next (err);
+  }
+})
+
+// Reject Prescription
+router.put("/reject-prescription/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const rejected = await AdminServices.rejectPrescription(id);
+    res.status(200).json("Prescription Rejected Successfully", rejected);
+  } catch (err) {
+    next (err);
+  }
+})
+
+
   
 //-------------------------------------------------------------------------------------------------------------------------------------------------
 

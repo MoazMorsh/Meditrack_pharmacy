@@ -59,12 +59,21 @@ export default function PendingOrders() {
   // Update order status locally and in the backend
   const updateOrderStatus = async (id: string, newStatus: string) => {
     try {
-      const res = await fetch(`http://localhost:8081/admin/orders/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      })
+      let url = ""
+      let fetchOptions: RequestInit = { method: "PUT" }
+      if (newStatus === "approved") {
+        url = `http://localhost:8081/admin/approve-order/${id}`
+      } else if (newStatus === "rejected") {
+        url = `http://localhost:8081/admin/reject-order/${id}`
+      } else {
+        url = `http://localhost:8081/admin/orders/${id}`
+        fetchOptions.headers = { "Content-Type": "application/json" }
+        fetchOptions.body = JSON.stringify({ status: newStatus })
+      }
+
+      const res = await fetch(url, fetchOptions)
       if (!res.ok) throw new Error("Failed to update order status")
+
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
           order.id === id ? { ...order, status: newStatus } : order
@@ -142,7 +151,7 @@ export default function PendingOrders() {
                       size="sm"
                       variant="default"
                       onClick={() => updateOrderStatus(order.id, "approved")}
-                      disabled={order.status !== "pending_approval"}
+                      disabled={order.status !== "Pending"}
                     >
                       Approve
                     </Button>
@@ -150,7 +159,7 @@ export default function PendingOrders() {
                       size="sm"
                       variant="secondary"
                       onClick={() => updateOrderStatus(order.id, "rejected")}
-                      disabled={order.status !== "pending_approval"}
+                      disabled={order.status !== "Pending"}
                     >
                       Reject
                     </Button>
@@ -254,14 +263,14 @@ export default function PendingOrders() {
                 </Button>
                 <Button
                   onClick={() => updateOrderStatus(selectedOrder.id, "approved")}
-                  disabled={selectedOrder.status !== "pending_approval"}
+                  disabled={selectedOrder.status !== "Pending"}
                 >
                   Approve
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={() => updateOrderStatus(selectedOrder.id, "rejected")}
-                  disabled={selectedOrder.status !== "pending_approval"}
+                  disabled={selectedOrder.status !== "Pending"}
                 >
                   Reject
                 </Button>

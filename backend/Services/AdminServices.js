@@ -85,53 +85,15 @@ async function getPendingPerciptions() {
   return pending;
 }
 
-async function createOrder(patient_id, items) {
-    let total = 0;
-    let requiresApproval = false;
-    const orderItems = [];
-  
-    for (let item of items) {
-      const medicine = await MedicineRepo.getMedicineById(item.medicine_id);
-  
-      if (!medicine) {
-        throw new Error(`Medicine with ID ${item.medicine_id} not found`);
-      }
-  
-      total += medicine.price * item.quantity;
-  
-      // Check if the medicine needs a prescription
-      if (medicine.prescription_required) { 
-        requiresApproval = true;
-      }
-  
-      orderItems.push({
-        medicine_id: item.medicine_id,
-        quantity: item.quantity,
-        price: medicine.price,
-      });
-    }
-  
-    // Decide the order status based on whether any medicine needs approval
-    const status = requiresApproval ? "pending_approval" : "pending";
-  
-    // Create the order
-    const order = await OrderRepository.createOrder({
-      patient_id: patient_id,
-      total_price: total,
-      status: status,
-    });
-  
-    const finalOrderItems = orderItems.map((item) => ({
-      ...item,
-      order_id: order.id,
-    }));
-  
-    await OrderRepository.createOrderItems(finalOrderItems);
-  
-    return order;
-  }
-  
+async function approvePrescription(id) {
+  const approve = await PrescriptionRepo.approvePrescription(id);
+  return approve;
+}
 
+async function rejectPrescription(id) {
+  const approve = await PrescriptionRepo.rejectPrescription(id);
+  return approve;
+}
 
 //---------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -186,7 +148,7 @@ async function createOrder(patient_id, items) {
     }
   
     // Decide the order status based on whether any medicine needs approval
-    const status = requiresApproval ? "pending_approval" : "pending";
+    const status = requiresApproval ? "Pending" : "Pending";
   
     // Create the order
     const order = await OrderRepository.createOrder({
@@ -227,6 +189,8 @@ module.exports = {
   deleteMedicine,
   getAllPrescription,
   getPendingPerciptions,
+  approvePrescription,
+  rejectPrescription,
   getAllOrders,
   getOrderById,
   getPendingOrders,
