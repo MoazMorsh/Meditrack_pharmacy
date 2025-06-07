@@ -41,11 +41,11 @@ router.delete("/remove-account/:id", async (req, res, next) => {
 // Branches Services
 
 // Create Branches
-router.post("/branches", async (req, res, next) => {
+router.post("/branch", async (req, res, next) => {
   try {
-      const { name, generic_name, category, type, active_ingredients, prescription_required, storage_conditions, img_URL, quantity, price } = req.body;
-      const medicine = await PharmacistServices.createMedicine({ name, generic_name, category, type, active_ingredients, prescription_required, storage_conditions, img_URL, quantity, price });
-      res.status(201).json("Medicine Updated Successfully",medicine);
+      const { branch_name, pharmacy_id, address, phone, email, website, location  } = req.body;
+      const branch = await PharmacistServices.createBranch({ branch_name, pharmacy_id, address, phone, email, website, location });
+      res.status(201).json("Branch Added Successfully",branch);
   } catch (err) {
       next(err);
   }
@@ -54,41 +54,41 @@ router.post("/branches", async (req, res, next) => {
 // Get all Branches
 router.get("/branches", async (req, res, next) => {
   try {
-    const allMedicines = await PharmacistServices.getAllMedicines();
-    res.status(200).json(allMedicines);
+    const allBranches = await PharmacistServices.getAllBranches();
+    res.status(200).json(allBranches);
   } catch (err) {
     next(err);
   }
 });
-// Get Branche by id
-router.get("/branche/:id", async (req, res, next) => {
+// Get Branch by id
+router.get("/branch/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id); // 👈 ensure it's a number
-    const medicine = await PharmacistServices.getMedicineById(id);
-    res.status(200).json(medicine);
+    const branch = await PharmacistServices.getBranchById(id);
+    res.status(200).json(branch);
   } catch (err) {
     next(err);
   }
 });
 
-// Update Branche
-router.put("/branche/:id", async (req, res, next) => {
+// Update Branch
+router.put("/branch/:id", async (req, res, next) => {
     try {
       const id = req.params.id;
       const product = req.body;
-      const updated = await PharmacistServices.updateMedicine(id, product);
-      res.status(200).json("Medicine Updated Successfully",updated);
+      const updated = await PharmacistServices.updateBranch(id, product);
+      res.status(200).json("Branch Updated Successfully",updated);
     } catch (err) {
       next(err);
     }
   });
 
-  // Delete Branche
-router.delete("/branche/:id", async (req, res, next) => {
+  // Delete Branch
+router.delete("/branch/:id", async (req, res, next) => {
   const { id } = req.params;
   try {
-      const deletedMedicine = await PharmacistServices.deleteMedicine(id);
-      res.status(200).json("Medicine Deleted Successfully",deletedMedicine);
+      const deletedBranch = await PharmacistServices.deleteBranch(id);
+      res.status(200).json("Branch Deleted Successfully",deletedBranch);
   } catch (err) {
       next(err);
   }
@@ -102,7 +102,7 @@ router.post("/medicines", async (req, res, next) => {
   try {
       const { name, generic_name, category, type, active_ingredients, prescription_required, storage_conditions, img_URL, quantity, price } = req.body;
       const medicine = await PharmacistServices.createMedicine({ name, generic_name, category, type, active_ingredients, prescription_required, storage_conditions, img_URL, quantity, price });
-      res.status(201).json("Medicine Updated Successfully",medicine);
+      res.status(201).json("Medicine Created Successfully",medicine);
   } catch (err) {
       next(err);
   }
